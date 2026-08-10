@@ -12,13 +12,16 @@ interface RiskDef {
   color: string    // hex for email header
 }
 
+// Keep in sync with ALERT_ACTIONS in @/lib/audit — that list decides which
+// client-side actions POST here at all, this one decides how they're labelled.
 const HIGH_RISK: Record<string, RiskDef> = {
-  'role.change':                    { label: 'User Role Changed',         severity: 'critical', color: '#dc2626' }, // legacy — kept for backward compatibility
-  'user.role_change':               { label: 'User Role Changed',         severity: 'critical', color: '#dc2626' }, // actual caller: UserManagement.tsx
-  'user.driver_app_access_change':  { label: 'Driver App Access Changed', severity: 'high',     color: '#ea580c' }, // actual caller: UserManagement.tsx
-  'driver.terminate':               { label: 'Driver Terminated',          severity: 'high',     color: '#ea580c' },
-  'driver.rehire':                  { label: 'Driver Rehired',             severity: 'medium',   color: '#d97706' },
-  'driver.sensitive_field_viewed':  { label: 'Sensitive Field Accessed',   severity: 'medium',   color: '#7c3aed' },
+  'user.role_change':        { label: 'User Role Changed',        severity: 'critical', color: '#dc2626' },
+  'client.status_change':    { label: 'Client Status Changed',    severity: 'medium',   color: '#d97706' },
+  // Money that stops being owed to us, or to our client.
+  'invoice.void':            { label: 'Invoice Voided',           severity: 'critical', color: '#dc2626' },
+  'statement.void':          { label: 'Fee Statement Voided',     severity: 'critical', color: '#dc2626' },
+  // Fee overrides are how revenue quietly walks out the door.
+  'load.money_update':       { label: 'Load Rates / Fee Changed', severity: 'high',     color: '#ea580c' },
 }
 
 // Wildcard matches — any action containing these substrings
@@ -26,6 +29,7 @@ const HIGH_RISK_PATTERNS = [
   { pattern: 'bulk',   label: 'Bulk Operation',  severity: 'high'     as const, color: '#ea580c' },
   { pattern: 'delete', label: 'Record Deleted',  severity: 'high'     as const, color: '#dc2626' },
   { pattern: 'export', label: 'Data Exported',   severity: 'critical' as const, color: '#dc2626' },
+  { pattern: 'void',   label: 'Record Voided',   severity: 'critical' as const, color: '#dc2626' },
 ]
 
 export function getRiskDef(action: string): RiskDef | null {

@@ -3,14 +3,15 @@ import { createClient } from '@/lib/supabase/client'
 // Actions that trigger an email alert to admins.
 // Matches getRiskDef() in /api/audit/alert/route.ts — keep in sync.
 const ALERT_ACTIONS = new Set([
-  'role.change',               // legacy — kept for backward compatibility
-  'user.role_change',          // actual caller: UserManagement.tsx
-  'user.driver_app_access_change', // actual caller: UserManagement.tsx
-  'driver.terminate',
-  'driver.rehire',
-  'driver.sensitive_field_viewed',
+  'user.role_change',
+  'client.status_change',
+  'invoice.void',
+  'statement.void',
+  // Rewriting the fee on a load changes what Avantra earns, so it's worth a look
+  // even when it's legitimate (detention added, fee waived for goodwill).
+  'load.money_update',
 ])
-const ALERT_PATTERNS = ['bulk', 'delete', 'export']
+const ALERT_PATTERNS = ['bulk', 'delete', 'export', 'void']
 
 function isHighRisk(action: string): boolean {
   if (ALERT_ACTIONS.has(action)) return true

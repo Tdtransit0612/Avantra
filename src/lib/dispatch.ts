@@ -84,6 +84,60 @@ export const EQUIPMENT_TYPES = [
   'Dry Van', 'Reefer', 'Flatbed', 'Step Deck', 'Power Only', 'Hotshot', 'Box Truck', 'Conestoga',
 ]
 
+/**
+ * The happy-path next step for a load. Terminal states (paid/cancelled/tonu)
+ * map to nothing. Anything off this path is still reachable from the status
+ * dropdown on the load — this only drives the one-click "advance" affordance.
+ */
+export const NEXT_STATUS: Partial<Record<LoadStatus, LoadStatus>> = {
+  sourced:       'offered',
+  offered:       'booked',
+  booked:        'dispatched',
+  dispatched:    'at_pickup',
+  at_pickup:     'in_transit',
+  in_transit:    'at_delivery',
+  at_delivery:   'delivered',
+  delivered:     'docs_received',
+  docs_received: 'invoiced',
+  invoiced:      'paid',
+}
+
+/** Verb for the button that moves a load to NEXT_STATUS[status]. */
+export const ADVANCE_LABELS: Partial<Record<LoadStatus, string>> = {
+  sourced:       'Offer to client',
+  offered:       'Client accepted',
+  booked:        'Dispatch',
+  dispatched:    'Arrived at pickup',
+  at_pickup:     'Loaded / rolling',
+  in_transit:    'Arrived at delivery',
+  at_delivery:   'Delivered',
+  delivered:     'Docs received',
+  docs_received: 'Invoice',
+  invoiced:      'Mark paid',
+}
+
+/**
+ * Lifecycle timestamps to stamp when a load ENTERS a status. Keyed by the status
+ * being entered. Kept here so the board, the detail page, and any future
+ * automation all stamp the same columns.
+ */
+export const STATUS_TIMESTAMP: Partial<Record<LoadStatus, string>> = {
+  offered:     'offered_at',
+  booked:      'booked_at',
+  dispatched:  'dispatched_at',
+  at_pickup:   'picked_up_at',
+  delivered:   'delivered_at',
+  cancelled:   'cancelled_at',
+}
+
+/** Patch to apply when moving a load into `to`. Includes the lifecycle stamp. */
+export function statusPatch(to: LoadStatus): Record<string, unknown> {
+  const patch: Record<string, unknown> = { status: to }
+  const stamp = STATUS_TIMESTAMP[to]
+  if (stamp) patch[stamp] = new Date().toISOString()
+  return patch
+}
+
 export const LOAD_SOURCE_LABELS: Record<string, string> = {
   dat:           'DAT',
   truckstop:     'Truckstop',

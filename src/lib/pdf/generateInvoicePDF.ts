@@ -54,14 +54,22 @@ function fmtDate(d: string | null | undefined): string {
 }
 
 /* ─── Inputs ───────────────────────────────────────────────────────────────
-   The caller passes the real `invoices` row with its load + customer embedded
-   (Supabase PostgREST embed or a JS stitch). Only the fields the PDF prints are
-   typed here; extra columns on the row are ignored. ────────────────────────── */
+   The caller passes the real `invoices` row with its load and its BILL-TO party
+   embedded (Supabase PostgREST embed or a JS stitch). Only the fields the PDF
+   prints are typed here; extra columns on the row are ignored.
+
+   Direction matters: this invoice is issued in our CLIENT CARRIER's name (that
+   identity arrives via `settings.company` — build it with
+   buildClientInvoiceParty()) and billed TO the BROKER (the `billTo` below).
+   Getting those two backwards would bill our own client for their own freight. */
 export interface InvoiceLoadForPDF {
   load_number: string | null
-  customer_rate: number | null
+  line_haul: number | null
   fuel_surcharge: number | null
   accessorials: number | null
+  detention: number | null
+  lumper: number | null
+  other_charges: number | null
   shipper_name: string | null
   consignee_name: string | null
   pickup_city: string | null
@@ -78,7 +86,8 @@ export interface InvoiceLoadForPDF {
   weight: number | null
 }
 
-export interface InvoiceCustomerForPDF {
+/** The broker being billed. */
+export interface InvoiceBillToForPDF {
   name: string | null
   billing_email: string | null
   billing_phone: string | null
@@ -96,11 +105,13 @@ export interface InvoiceForPDF {
   due_date: string | null
   status: string | null
   created_at: string | null
-  sent_date: string | null
-  factored: boolean | null
-  factoring_company: string | null
+  issued_date: string | null
+  sent_at: string | null
+  /** Receivable assigned to a factor — remit must point there, not at the carrier. */
+  factored_at: string | null
+  factoring_company_name: string | null
   load?: InvoiceLoadForPDF | null
-  customer?: InvoiceCustomerForPDF | null
+  billTo?: InvoiceBillToForPDF | null
 }
 
 /* ─── Defensive views over @/lib/billing return shapes ──────────────────────
@@ -130,7 +141,7 @@ export async function generateInvoicePDF(
   const company = ((settings?.company as CompanyIdentityLike | undefined) ?? DEFAULT_COMPANY_IDENTITY) as CompanyIdentityLike
   const remit = getRemitInfo(settings) as RemitInfoLike
   const load = invoice.load ?? null
-  const customer = invoice.customer ?? null
+  const customer = invoice.billTo ?? null
 
   const doc = await PDFDocument.create()
   const font     = await doc.embedFont(StandardFonts.Helvetica)
@@ -148,24 +159,28 @@ export async function generateInvoicePDF(
   const paid          = Number(invoice.amount_paid) || 0
   const fuelSurcharge = Number(load?.fuel_surcharge) || 0
   const accessorials  = Number(load?.accessorials) || 0
-  // The invoiced amount is customer_rate (linehaul) + fuel surcharge + accessorials;
-  // back out the linehaul so each component prints as its own line.
-  const linehaul = Math.max(0, amount - fuelSurcharge - accessorials)
-  // An invoice is factored whenever the flag is set — even if no factoring_company
-  // name was captured — because its receivables are legally assigned to a factor.
-  const factored = !!invoice.factored
+  const detention     = Number(load?.detention) || 0
+  const lumper        = Number(load?.lumper) || 0
+  const otherCharges  = Number(load?.other_charges) || 0
+  // Print each component as its own line. Back the linehaul out of the invoiced
+  // amount rather than reading load.line_haul directly, so a hand-adjusted
+  // invoice total still foots against the lines shown.
+  const linehaul = Math.max(0, amount - fuelSurcharge - accessorials - detention - lumper - otherCharges)
+  // A receivable is factored once it's been assigned — even if no factor name was
+  // captured — because payment to the carrier would not discharge the debt.
+  const factored = !!invoice.factored_at
   const factorName = safe(
-    invoice.factoring_company ||
-    (settings as { factoring_settings?: { company?: string | null } } | null | undefined)?.factoring_settings?.company ||
+    invoice.factoring_company_name ||
+    settings?.factoring?.company ||
     'Assigned Factor',
   )
-  // On a factored invoice, amount_paid holds the factor's ADVANCE to Avantra —
-  // it is not a customer payment. The customer still owes the full amount to the
-  // factor, so it must not be credited against the customer-facing balance.
+  // On a factored invoice, amount_paid holds the FACTOR's advance to the carrier —
+  // it is not a broker payment. The broker still owes the full amount to the
+  // factor, so it must not be credited against the broker-facing balance.
   const customerPaid = factored ? 0 : paid
   const balance = Math.max(0, amount - customerPaid)
 
-  const invDate = fmtDate(invoice.sent_date || invoice.created_at) || fmtDate(new Date().toISOString())
+  const invDate = fmtDate(invoice.issued_date || invoice.sent_at || invoice.created_at) || fmtDate(new Date().toISOString())
   const dueDate = fmtDate(invoice.due_date)
   const today   = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
 

@@ -7,7 +7,9 @@
 // matcher, so it renders with NO login and NO staff chrome (no Header / Sidebar /
 // useRole). It reads through the anon-granted SECURITY DEFINER RPC
 // `get_load_tracking`, which whitelists SAFE fields only — it can NEVER return
-// customer_rate, carrier_rate, or margin. We surface only shipment status + lane.
+// line_haul, gross_total, dispatch_fee, or net_to_client. Anyone holding a
+// tracking link (typically the broker or their shipper) must not be able to see
+// what the carrier nets or what Avantra charges.
 //
 // The RPC itself enforces `tracking_active = true AND deleted_at IS NULL`, so an
 // inactive/soft-deleted/unknown token simply returns zero rows → "not available".
@@ -16,7 +18,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import {
-  Snowflake, Truck, MapPin, Package, PackageCheck, PackageX,
+  Compass, Truck, MapPin, Package, PackageCheck, PackageX,
   Calendar, Thermometer, Loader2, Box, ArrowRight, Ban,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -26,6 +28,7 @@ type Tracking = {
   load_number: string
   status: string
   equipment_type: string | null
+  client_name: string | null
   pickup_city: string | null
   pickup_state: string | null
   pickup_date: string | null
@@ -34,14 +37,20 @@ type Tracking = {
   delivery_date: string | null
   commodity: string | null
   temperature: string | null
+  stop_count: number | null
   tracking_active: boolean
 }
 
 // Whitelisted public check-in from public.get_load_tracking_events(p_token uuid).
+// Note the internal `notes` column is deliberately absent from the RPC.
 type TrackEvent = {
   occurred_at: string
   location: string | null
+  city: string | null
+  state: string | null
+  status_note: string | null
   temperature: string | null
+  eta: string | null
 }
 
 function formatDateTime(iso: string): string {
@@ -59,27 +68,40 @@ const STEPS = [
 /** Index of the current timeline step (0-2), or -1 for cancelled. */
 function currentStep(status: string): number {
   switch (status) {
-    case 'cancelled':                     return -1
-    case 'in_transit':                    return 1
+    case 'cancelled':
+    case 'tonu':                          return -1
+    case 'at_pickup':
+    case 'in_transit':
+    case 'at_delivery':                   return 1
     case 'delivered':
+    case 'docs_received':
     case 'invoiced':
     case 'paid':                          return 2
-    // quote / available / covered / anything else → scheduled
+    // sourced / offered / booked / dispatched / anything else → scheduled
     default:                              return 0
   }
 }
 
-/** Customer-facing label for the raw load status. */
+/**
+ * Public-facing label for the raw load status. Deliberately coarse: the person
+ * holding this link doesn't need to know whether we've invoiced or been paid,
+ * and internal states like `sourced` would leak that the load wasn't committed.
+ */
 function statusLabel(status: string): string {
   const map: Record<string, string> = {
-    quote:      'Scheduled',
-    available:  'Scheduled',
-    covered:    'Carrier Assigned',
-    in_transit: 'In Transit',
-    delivered:  'Delivered',
-    invoiced:   'Delivered',
-    paid:       'Delivered',
-    cancelled:  'Cancelled',
+    sourced:       'Scheduled',
+    offered:       'Scheduled',
+    booked:        'Scheduled',
+    dispatched:    'Driver Assigned',
+    at_pickup:     'At Pickup',
+    in_transit:    'In Transit',
+    at_delivery:   'At Delivery',
+    delivered:     'Delivered',
+    docs_received: 'Delivered',
+    invoiced:      'Delivered',
+    paid:          'Delivered',
+    cancelled:     'Cancelled',
+    tonu:          'Cancelled',
   }
   return map[status] ?? 'In Progress'
 }
@@ -112,22 +134,22 @@ function Timeline({ step }: { step: number }) {
             {/* Connector to the previous node */}
             {i > 0 && (
               <span
-                className={`absolute top-5 right-1/2 h-0.5 w-full -z-0 ${i <= step ? 'bg-sky-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+                className={`absolute top-5 right-1/2 h-0.5 w-full -z-0 ${i <= step ? 'bg-indigo-500' : 'bg-slate-200 dark:bg-slate-700'}`}
                 aria-hidden
               />
             )}
             <div
               className={`relative z-10 flex h-10 w-10 items-center justify-center rounded-full border-2 transition-colors ${
                 done
-                  ? 'border-sky-500 bg-sky-500 text-white'
+                  ? 'border-indigo-500 bg-indigo-500 text-white'
                   : 'border-slate-200 bg-white text-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-600'
-              } ${isCurrent ? 'ring-4 ring-sky-100 dark:ring-sky-900/40' : ''}`}
+              } ${isCurrent ? 'ring-4 ring-indigo-100 dark:ring-indigo-900/40' : ''}`}
             >
               <Icon className="h-5 w-5" />
             </div>
             <span
               className={`mt-2 text-center text-xs font-semibold ${
-                done ? 'text-sky-700 dark:text-sky-300' : 'text-slate-400 dark:text-slate-500'
+                done ? 'text-indigo-700 dark:text-indigo-300' : 'text-slate-400 dark:text-slate-500'
               }`}
             >
               {s.label}
@@ -142,15 +164,15 @@ function Timeline({ step }: { step: number }) {
 // ── Page shell (branded background + brand mark) ─────────────────────────────
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-sky-50 via-white to-sky-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex flex-col items-center px-4 py-10 sm:py-16">
+    <div className="min-h-screen w-full bg-gradient-to-b from-indigo-50 via-white to-indigo-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex flex-col items-center px-4 py-10 sm:py-16">
       <div className="w-full max-w-xl">
         {/* Brand mark */}
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-600 text-white shadow-lg shadow-sky-600/20">
-            <Snowflake className="h-7 w-7" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/20">
+            <Compass className="h-7 w-7" />
           </div>
           <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Avantra</h1>
-          <p className="text-sm font-medium text-sky-600 dark:text-sky-400">Shipment Tracking</p>
+          <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400">Shipment Tracking</p>
         </div>
         {children}
         <p className="mt-8 text-center text-xs text-slate-400 dark:text-slate-600">
@@ -201,7 +223,7 @@ export default function TrackPage() {
     return (
       <Shell>
         <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-12 flex flex-col items-center gap-3">
-          <Loader2 className="h-7 w-7 animate-spin text-sky-500" />
+          <Loader2 className="h-7 w-7 animate-spin text-indigo-500" />
           <p className="text-sm text-slate-400 dark:text-slate-500">Loading shipment status…</p>
         </div>
       </Shell>
@@ -251,11 +273,11 @@ export default function TrackPage() {
                 <Ban className="h-3.5 w-3.5" /> Cancelled
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 dark:bg-sky-900/30 px-3 py-1 text-xs font-semibold text-sky-700 dark:text-sky-300">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300">
                 {data.tracking_active && (
                   <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-sky-500" />
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500" />
                   </span>
                 )}
                 {statusLabel(data.status)}
@@ -282,7 +304,7 @@ export default function TrackPage() {
             {/* Origin */}
             <div className="flex-1">
               <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
-                <MapPin className="h-3.5 w-3.5 text-sky-500" /> Origin
+                <MapPin className="h-3.5 w-3.5 text-indigo-500" /> Origin
               </div>
               <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{cityState(data.pickup_city, data.pickup_state)}</p>
               {pickupDate && (
@@ -299,7 +321,7 @@ export default function TrackPage() {
             {/* Destination */}
             <div className="flex-1 text-right">
               <div className="flex items-center justify-end gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
-                Destination <MapPin className="h-3.5 w-3.5 text-sky-500" />
+                Destination <MapPin className="h-3.5 w-3.5 text-indigo-500" />
               </div>
               <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{cityState(data.delivery_city, data.delivery_state)}</p>
               {deliveryDate && (
@@ -314,30 +336,41 @@ export default function TrackPage() {
         {/* Freight details */}
         {(data.commodity || data.temperature || data.equipment_type) && (
           <div className="border-t border-slate-100 dark:border-slate-800 px-6 py-5 grid grid-cols-3 gap-3">
-            <Detail icon={<Box className="h-4 w-4 text-sky-500" />} label="Commodity" value={data.commodity} />
-            <Detail icon={<Thermometer className="h-4 w-4 text-sky-500" />} label="Temperature" value={data.temperature} />
-            <Detail icon={<Truck className="h-4 w-4 text-sky-500" />} label="Equipment" value={data.equipment_type} />
+            <Detail icon={<Box className="h-4 w-4 text-indigo-500" />} label="Commodity" value={data.commodity} />
+            <Detail icon={<Thermometer className="h-4 w-4 text-indigo-500" />} label="Temperature" value={data.temperature} />
+            <Detail icon={<Truck className="h-4 w-4 text-indigo-500" />} label="Equipment" value={data.equipment_type} />
           </div>
         )}
 
-        {/* Recent check-ins (public, whitelisted: time / location / reefer temp) */}
+        {/* Recent check-ins. The RPC returns only rows a dispatcher flagged
+            public, and never the internal note column. */}
         {events.length > 0 && (
           <div className="border-t border-slate-100 dark:border-slate-800 px-6 py-5">
             <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 mb-3">
-              <Thermometer className="h-3.5 w-3.5 text-sky-500" /> Recent check-ins
+              <MapPin className="h-3.5 w-3.5 text-indigo-500" /> Recent check-ins
             </div>
             <div className="space-y-3">
-              {events.map((ev, i) => (
-                <div key={i} className="flex items-start gap-3">
-                  <div className="mt-1.5 h-2 w-2 rounded-full bg-sky-500 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium text-slate-700 dark:text-slate-200">{formatDateTime(ev.occurred_at)}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {[ev.location, ev.temperature].filter(Boolean).join(' · ') || 'Status update'}
-                    </p>
+              {events.map((ev, i) => {
+                const where = ev.location || [ev.city, ev.state].filter(Boolean).join(', ')
+                return (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="mt-1.5 h-2 w-2 rounded-full bg-indigo-500 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-slate-700 dark:text-slate-200">
+                        {ev.status_note || where || 'Status update'}
+                      </p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {[
+                          formatDateTime(ev.occurred_at),
+                          ev.status_note ? where : null,
+                          ev.temperature,
+                          ev.eta ? `ETA ${formatDateTime(ev.eta)}` : null,
+                        ].filter(Boolean).join(' · ')}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}

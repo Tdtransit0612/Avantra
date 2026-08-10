@@ -32,7 +32,7 @@ import {
   CLIENT_STATUSES, CLIENT_STATUS_LABELS, CLIENT_STATUS_COLORS,
   COMPLIANCE_KINDS, COMPLIANCE_KIND_LABEL, COMPLIANCE_STATUS_LABELS, COMPLIANCE_STATUS_COLORS,
   LOAD_STATUS_LABELS, LOAD_STATUS_COLORS, EQUIPMENT_TYPES,
-  describeFeePlan, money, money2, longDate, dateTime, shortDate, lane, daysUntil, num,
+  describeFeePlan, money, longDate, dateTime, shortDate, lane, daysUntil, num,
 } from '@/lib/dispatch'
 import type {
   Client, ClientDriver, ClientEquipment, OnboardingStep, ComplianceItem,

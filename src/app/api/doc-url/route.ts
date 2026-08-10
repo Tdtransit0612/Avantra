@@ -3,16 +3,19 @@ import { createClient as createAdmin } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 
 // POST /api/doc-url — mint a short-lived signed URL for an object in the PRIVATE
-// shared `documents` bucket (load paperwork: rate-cons, PODs, BOLs, carrier COIs,
-// W-9s, etc.). The bucket is never public; always sign on read.
+// `documents` bucket (rate cons, PODs, BOLs, COIs, W-9s, agreements). The bucket
+// is never public; always sign on read.
 //
-// Authorization (Phase 1): staff only (master / admin / broker / carrier_sales /
-// accounting) may sign any path. There is no external portal yet.
+// Authorization: staff only (master / admin / dispatcher / back_office / sales).
+// Any staff member may sign any path. There is no external portal yet.
 //
-// ⚠️ When the carrier/shipper portal lands (Phase 2) on the SAME Supabase project,
-// add path-scoped access for those roles here (e.g. carriers/<carrierId>/… gated
-// by my_carrier_ids()), mirroring Top Dawg's driver-scoped branch — and stage the
-// row-scoping BEFORE the first external login.
+// ⚠️ When the client portal lands (Phase 3) on this SAME Supabase project, add
+// path-scoped access here before the first external login: a `client` user must
+// only be able to sign objects belonging to their own carrier. The uploader
+// already writes paths as <entity_type>/<entity_id>/…, and documents.client_id +
+// app_client_id() give you the scoping key — but this route does not check it
+// yet, so shipping the portal without that branch would leak every client's
+// paperwork to every other client.
 //
 // Accepts either a bare storage path or a stored public/sign URL; the object path
 // is extracted from it.

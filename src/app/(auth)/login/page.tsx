@@ -169,7 +169,7 @@ function LoginForm() {
       <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="flex flex-col items-center mb-8">
-            <div className="bg-sky-600 p-3 rounded-xl mb-3">
+            <div className="bg-indigo-600 p-3 rounded-xl mb-3">
               <Snowflake className="h-8 w-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-white">Avantra</h1>
@@ -195,7 +195,7 @@ function LoginForm() {
               </div>
               <button
                 onClick={() => { setConfirmationSent(false); setMode('signin') }}
-                className="text-sm text-sky-600 hover:underline"
+                className="text-sm text-indigo-600 hover:underline"
               >
                 Back to sign in
               </button>
@@ -212,7 +212,7 @@ function LoginForm() {
       <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="flex flex-col items-center mb-8">
-            <div className="bg-sky-600 p-3 rounded-xl">
+            <div className="bg-indigo-600 p-3 rounded-xl">
               <Snowflake className="h-8 w-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-white mt-3">Two-Factor Auth</h1>
@@ -240,7 +240,7 @@ function LoginForm() {
                   </p>
                 </div>
                 {error && <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 p-3 rounded-lg">{error}</p>}
-                <Button type="submit" className="w-full bg-sky-600 hover:bg-sky-700" disabled={loading || mfaCode.replace(/\s/g,'').length < 6}>
+                <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700" disabled={loading || mfaCode.replace(/\s/g,'').length < 6}>
                   {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Verify
                 </Button>
                 <button type="button" onClick={() => { setStep('credentials'); setError(''); setMfaCode('') }} className="w-full text-sm text-gray-400 hover:text-gray-200 text-center">
@@ -259,7 +259,7 @@ function LoginForm() {
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <div className="bg-sky-600 p-3 rounded-xl">
+            <div className="bg-indigo-600 p-3 rounded-xl">
               <Snowflake className="h-8 w-8 text-white" />
             </div>
           </div>
@@ -345,7 +345,7 @@ function LoginForm() {
                         type="button"
                         onClick={handleResendConfirmation}
                         disabled={resending}
-                        className="flex items-center gap-1.5 text-sky-600 dark:text-sky-400 hover:underline font-medium text-xs"
+                        className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 hover:underline font-medium text-xs"
                       >
                         {resending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />}
                         {resending ? 'Sending…' : 'Resend confirmation email'}
@@ -353,7 +353,7 @@ function LoginForm() {
                     )}
                   </div>
                 )}
-                <Button type="submit" className="w-full bg-sky-600 hover:bg-sky-700" disabled={loading || lockoutMins !== null}>
+                <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700" disabled={loading || lockoutMins !== null}>
                   {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Sign In
                 </Button>
               </form>
@@ -372,7 +372,7 @@ function LoginForm() {
                   <Input className="mt-1" type="password" placeholder="At least 6 characters" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
                 </div>
                 {error && <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 p-3 rounded-lg">{error}</p>}
-                <Button type="submit" className="w-full bg-sky-600 hover:bg-sky-700" disabled={loading}>
+                <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700" disabled={loading}>
                   {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Create Account
                 </Button>
                 <p className="text-xs text-gray-400 text-center">

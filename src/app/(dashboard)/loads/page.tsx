@@ -32,7 +32,7 @@ import { useSort, type SortAccessors } from '@/lib/use-sort'
 import {
   LOAD_STATUSES, LOAD_STATUS_LABELS, LOAD_STATUS_COLORS, OPEN_LOAD_STATUSES,
   EQUIPMENT_TYPES, LOAD_SOURCE_LABELS, computeFee, describeFeePlan,
-  num, money, money2, shortDate, lane,
+  num, money, money2, shortDate, lane, daysUntil,
 } from '@/lib/dispatch'
 import type { Load, LoadStatus, Client, Broker } from '@/types'
 
@@ -144,10 +144,10 @@ function BookLoadSheet({ onCreated }: { onCreated: () => void }) {
       out.push(`${client.dba_name || client.legal_name} does not show active operating authority.`)
     }
     if (client && !client.agreement_signed_at) out.push('No signed dispatch agreement on file for this client.')
-    if (client?.insurance_expiry) {
-      const days = Math.round((new Date(`${client.insurance_expiry}T00:00:00`).getTime() - Date.now()) / 86_400_000)
-      if (days < 0) out.push('This client’s certificate of insurance has EXPIRED.')
-      else if (days <= 14) out.push(`This client’s COI expires in ${days} day${days === 1 ? '' : 's'}.`)
+    const coiDays = daysUntil(client?.insurance_expiry)
+    if (coiDays != null) {
+      if (coiDays < 0) out.push('This client’s certificate of insurance has EXPIRED.')
+      else if (coiDays <= 14) out.push(`This client’s COI expires in ${coiDays} day${coiDays === 1 ? '' : 's'}.`)
     }
     if (client?.min_rate_per_mile && num(form.miles) > 0) {
       const rpm = preview.gross / num(form.miles)

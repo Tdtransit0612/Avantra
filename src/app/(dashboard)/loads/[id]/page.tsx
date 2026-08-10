@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/sheet'
 import { DocumentsPanel } from '@/components/DocumentsPanel'
 import {
-  ArrowLeft, Loader2, MapPin, ChevronRight, ChevronsRight, Truck, Phone,
+  ArrowLeft, Loader2, MapPin, ChevronsRight, Truck, Phone,
   DollarSign, Percent, AlertTriangle, Save, Link2, Copy, Trash2, Ban,
   CalendarDays, Building2, FileText, Plus,
 } from 'lucide-react'

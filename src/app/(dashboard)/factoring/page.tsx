@@ -17,7 +17,7 @@ import {
 import {
   Plus, Loader2, Banknote, AlertTriangle, Save, ExternalLink, Users, PencilLine,
 } from 'lucide-react'
-import { toast } from 'sonner'
+
 import { createClient } from '@/lib/supabase/client'
 import { logAudit } from '@/lib/audit'
 import { useRole } from '@/lib/role-context'

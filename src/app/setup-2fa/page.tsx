@@ -119,7 +119,7 @@ export default function SetupMfaPage() {
 
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="bg-sky-600 p-3 rounded-xl mb-3 shadow-lg shadow-sky-500/20">
+          <div className="bg-indigo-600 p-3 rounded-xl mb-3 shadow-lg shadow-indigo-500/20">
             <Snowflake className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-white">Avantra</h1>
@@ -128,14 +128,14 @@ export default function SetupMfaPage() {
 
         {/* Card */}
         <div className="bg-gray-900 rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
-          <div className="h-0.5 bg-gradient-to-r from-sky-500 via-sky-400 to-transparent" />
+          <div className="h-0.5 bg-gradient-to-r from-indigo-500 via-indigo-400 to-transparent" />
 
           <div className="p-8">
 
             {/* Checking */}
             {step === 'checking' && (
               <div className="text-center py-4">
-                <Loader2 className="h-8 w-8 animate-spin text-sky-500 mx-auto mb-3" />
+                <Loader2 className="h-8 w-8 animate-spin text-indigo-500 mx-auto mb-3" />
                 <p className="text-gray-400 text-sm">Checking account status…</p>
               </div>
             )}
@@ -155,8 +155,8 @@ export default function SetupMfaPage() {
             {step === 'intro' && (
               <div className="space-y-5">
                 <div className="text-center">
-                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-sky-500/15 border border-sky-500/30 mb-4">
-                    <ShieldCheck className="h-7 w-7 text-sky-400" />
+                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 mb-4">
+                    <ShieldCheck className="h-7 w-7 text-indigo-400" />
                   </div>
                   <h2 className="text-xl font-bold text-white mb-2">
                     {reconfigure ? 'Set Up a New Device' : 'Two-Factor Auth Required'}
@@ -175,7 +175,7 @@ export default function SetupMfaPage() {
                     { n: '3', text: 'Enter the 6-digit code to confirm' },
                   ].map(item => (
                     <div key={item.n} className="flex items-start gap-3">
-                      <span className="w-5 h-5 rounded-full bg-sky-500 text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{item.n}</span>
+                      <span className="w-5 h-5 rounded-full bg-indigo-500 text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{item.n}</span>
                       <p className="text-sm text-gray-300">{item.text}</p>
                     </div>
                   ))}
@@ -184,7 +184,7 @@ export default function SetupMfaPage() {
                 <button
                   onClick={handleStart}
                   disabled={loading}
-                  className="w-full bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                 >
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
                   Set Up Two-Factor Auth
@@ -223,9 +223,9 @@ export default function SetupMfaPage() {
 
                 <button
                   onClick={() => setStep('verify')}
-                  className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 rounded-xl transition-colors"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-colors"
                 >
-                  I've scanned it →
+                  I&rsquo;ve scanned it →
                 </button>
               </div>
             )}
@@ -248,7 +248,7 @@ export default function SetupMfaPage() {
                   onChange={e => setCode(e.target.value.replace(/[^0-9 ]/g, ''))}
                   autoFocus
                   required
-                  className="w-full text-center text-3xl font-mono font-bold tracking-[0.5em] bg-white/5 border-2 border-white/10 focus:border-sky-500/60 text-white rounded-xl px-4 py-4 outline-none transition-colors placeholder-gray-600"
+                  className="w-full text-center text-3xl font-mono font-bold tracking-[0.5em] bg-white/5 border-2 border-white/10 focus:border-indigo-500/60 text-white rounded-xl px-4 py-4 outline-none transition-colors placeholder-gray-600"
                 />
 
                 {error && (
@@ -268,7 +268,7 @@ export default function SetupMfaPage() {
                   <button
                     type="submit"
                     disabled={loading || code.replace(/\s/g, '').length < 6}
-                    className="flex-1 bg-sky-600 hover:bg-sky-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                   >
                     {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                     Confirm & Activate
@@ -283,9 +283,9 @@ export default function SetupMfaPage() {
                 <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-green-500/15 border border-green-500/30 mb-1">
                   <ShieldCheck className="h-7 w-7 text-green-400" />
                 </div>
-                <p className="text-white font-bold text-xl">You're all set!</p>
+                <p className="text-white font-bold text-xl">You&rsquo;re all set!</p>
                 <p className="text-gray-400 text-sm">2FA is active on your account.<br />Taking you to the dashboard…</p>
-                <Loader2 className="h-5 w-5 animate-spin text-sky-500 mx-auto" />
+                <Loader2 className="h-5 w-5 animate-spin text-indigo-500 mx-auto" />
               </div>
             )}
 

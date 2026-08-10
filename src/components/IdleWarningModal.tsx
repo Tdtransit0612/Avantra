@@ -67,10 +67,10 @@ export default function IdleWarningModal() {
           Still there?
         </h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
-          You've been inactive for {TIMEOUT_MINS - WARNING_MINS} minutes.
+          You&rsquo;ve been inactive for {TIMEOUT_MINS - WARNING_MINS} minutes.
         </p>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-          You'll be automatically signed out in:
+          You&rsquo;ll be automatically signed out in:
         </p>
 
         {/* Countdown */}

@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import type { EmailOtpType } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
 export async function GET(request: NextRequest) {
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
 
   if (token_hash && type) {
     // Email OTP / magic-link flow
-    const { error } = await supabase.auth.verifyOtp({ token_hash, type: type as any })
+    const { error } = await supabase.auth.verifyOtp({ token_hash, type: type as EmailOtpType })
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`)
     }

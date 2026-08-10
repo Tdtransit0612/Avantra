@@ -96,13 +96,19 @@ function notFound(dot: string | null, mc: string | null): NormalizedCarrier {
   }
 }
 
+// QCMobile returns loosely-typed JSON that varies by endpoint, so these are
+// intentionally permissive index shapes rather than a full schema — every read
+// below already goes through str()/null-guards.
+type FmcsaCarrier = Record<string, unknown>
+type FmcsaEnvelope = { content?: { carrier?: FmcsaCarrier } | Array<{ carrier?: FmcsaCarrier }> }
+
 /**
  * Shape a raw FMCSA carrier object into a NormalizedCarrier.
  * @param carrier     the `carrier` sub-object from the FMCSA response
  * @param mcFallback  MC number to record when we looked up by docket (the carrier
  *                    object itself doesn't reliably echo the MC)
  */
-function normalize(carrier: any, mcFallback: string | null): NormalizedCarrier {
+function normalize(carrier: FmcsaCarrier | null | undefined, mcFallback: string | null): NormalizedCarrier {
   const allowedRaw = str(carrier?.allowedToOperate)
   const allowed = allowedRaw ? allowedRaw.toUpperCase() : null
   const authority_status: AuthorityStatus =
@@ -185,7 +191,7 @@ export async function lookupByDot(dotInput: string): Promise<NormalizedCarrier> 
   const { status, json } = await fmcsaGet(`/carriers/${dot}`)
   if (status === 404) return notFound(dot, null)
 
-  const content = (json as any)?.content
+  const content = (json as FmcsaEnvelope | null)?.content
   // Single-carrier endpoint nests under content.carrier; guard the empty-array miss.
   const carrier = Array.isArray(content) ? content[0]?.carrier : content?.carrier
   if (!carrier) return notFound(dot, null)
@@ -202,7 +208,7 @@ export async function lookupByMc(mcInput: string): Promise<NormalizedCarrier> {
   if (status === 404) return notFound(null, mc)
 
   // Docket endpoint returns content as an array of { carrier } wrappers.
-  const content = (json as any)?.content
+  const content = (json as FmcsaEnvelope | null)?.content
   const carrier = Array.isArray(content) ? content[0]?.carrier : content?.carrier
   if (!carrier) return notFound(null, mc)
 

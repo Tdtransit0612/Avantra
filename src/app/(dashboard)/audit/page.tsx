@@ -13,7 +13,7 @@ import {
   Loader2, Search, ClipboardList, Download, RefreshCw,
   ChevronLeft, ChevronRight, Filter, FileText, Truck,
   Users, Package, FileCheck, Building2,
-  Wallet, ShieldCheck, Settings, ChevronDown, ChevronUp, Lock,
+  Wallet, ShieldCheck, Settings, ChevronDown, ChevronUp, Lock, Wrench,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRole } from '@/lib/role-context'
@@ -32,8 +32,9 @@ type LogEntry = {
 }
 
 // ─── Category config ──────────────────────────────────────────────────────────
-// Brokerage-shaped taxonomy. `prefixes` is an array so a category can absorb more
-// than one action namespace (e.g. User & Role covers both `user.` and `role.`).
+// `prefixes` is an array so one category can absorb several action namespaces —
+// e.g. Client covers the client record plus its drivers and equipment, which are
+// edited from the same screen and read as one thing to whoever's auditing.
 type Category = {
   key: string
   label: string
@@ -43,15 +44,16 @@ type Category = {
 }
 
 const CATEGORIES: readonly Category[] = [
-  { key: 'load',       label: 'Load',        prefixes: ['load.'],              icon: Package,    color: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300' },
-  { key: 'carrier',    label: 'Carrier',     prefixes: ['carrier.'],           icon: Truck,      color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
-  { key: 'customer',   label: 'Customer',    prefixes: ['customer.'],          icon: Building2,  color: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' },
-  { key: 'invoice',    label: 'Invoice',     prefixes: ['invoice.'],           icon: FileText,   color: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300' },
-  { key: 'settlement', label: 'Settlement',  prefixes: ['settlement.'],        icon: Wallet,     color: 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300' },
-  { key: 'compliance', label: 'Compliance',  prefixes: ['compliance.', 'fmcsa.'], icon: ShieldCheck, color: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' },
-  { key: 'document',   label: 'Document',    prefixes: ['document.'],          icon: FileCheck,  color: 'bg-slate-100 text-slate-700 dark:bg-slate-900/40 dark:text-slate-300' },
-  { key: 'user',       label: 'User & Role', prefixes: ['user.', 'role.'],     icon: Users,      color: 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300' },
-  { key: 'settings',   label: 'Settings',    prefixes: ['settings.'],          icon: Settings,   color: 'bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300' },
+  { key: 'load',       label: 'Load',        prefixes: ['load.'],                                  icon: Package,     color: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' },
+  { key: 'client',     label: 'Client',      prefixes: ['client.', 'client_driver', 'client_equipment'], icon: Truck, color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
+  { key: 'broker',     label: 'Broker',      prefixes: ['broker.'],                                icon: Building2,   color: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' },
+  { key: 'invoice',    label: 'Invoice / AR', prefixes: ['invoice.'],                              icon: FileText,    color: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300' },
+  { key: 'statement',  label: 'Fee Statement', prefixes: ['statement.', 'factoring_company.'],     icon: Wallet,      color: 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300' },
+  { key: 'compliance', label: 'Compliance',  prefixes: ['compliance', 'fmcsa.'],                   icon: ShieldCheck, color: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' },
+  { key: 'service',    label: 'Services',    prefixes: ['service_request'],                        icon: Wrench,      color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300' },
+  { key: 'document',   label: 'Document',    prefixes: ['document.'],                              icon: FileCheck,   color: 'bg-slate-100 text-slate-700 dark:bg-slate-900/40 dark:text-slate-300' },
+  { key: 'user',       label: 'User & Role', prefixes: ['user.', 'role.', 'account.'],             icon: Users,       color: 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300' },
+  { key: 'settings',   label: 'Settings',    prefixes: ['settings.', 'security.', 'protected.'],   icon: Settings,    color: 'bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300' },
 ] as const
 
 function getCategory(action: string): Category | null {
@@ -132,7 +134,7 @@ function LogRow({ log }: { log: LogEntry }) {
   return (
     <>
       <tr
-        className={`border-b dark:border-white/10 last:border-0 transition-colors ${expanded ? 'bg-sky-50/60 dark:bg-sky-900/10' : 'hover:bg-gray-50 dark:hover:bg-white/5'} ${hasDetail ? 'cursor-pointer' : ''}`}
+        className={`border-b dark:border-white/10 last:border-0 transition-colors ${expanded ? 'bg-indigo-50/60 dark:bg-indigo-900/10' : 'hover:bg-gray-50 dark:hover:bg-white/5'} ${hasDetail ? 'cursor-pointer' : ''}`}
         onClick={() => hasDetail && setExpanded(e => !e)}
       >
         {/* Timestamp */}
@@ -185,7 +187,7 @@ function LogRow({ log }: { log: LogEntry }) {
 
       {/* Expanded diff */}
       {expanded && hasDetail && (
-        <tr className="bg-sky-50/40 dark:bg-sky-900/5 border-b dark:border-white/10">
+        <tr className="bg-indigo-50/40 dark:bg-indigo-900/5 border-b dark:border-white/10">
           <td colSpan={6} className="px-6 pb-4 pt-1">
             <Diff old={log.old_value} next={log.new_value} />
           </td>
@@ -358,8 +360,8 @@ function ExportModal({ filters }: { filters: ExportFilters }) {
     prevAvailKeysRef.current = newAvailKeys
   }, [availableFields])
 
-  const toggleCat = (k: string) => setSelCats(s => { const n = new Set(s); n.has(k) ? n.delete(k) : n.add(k); return n })
-  const toggleField = (k: string) => setSelFields(s => { const n = new Set(s); n.has(k) ? n.delete(k) : n.add(k); return n })
+  const toggleCat = (k: string) => setSelCats(s => { const n = new Set(s); if (n.has(k)) n.delete(k); else n.add(k); return n })
+  const toggleField = (k: string) => setSelFields(s => { const n = new Set(s); if (n.has(k)) n.delete(k); else n.add(k); return n })
 
   const handleOpenChange = (next: boolean) => {
     if (!next) {
@@ -479,7 +481,7 @@ function ExportModal({ filters }: { filters: ExportFilters }) {
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Download className="h-4 w-4 text-sky-500" />
+            <Download className="h-4 w-4 text-indigo-500" />
             Export Audit Log
           </DialogTitle>
         </DialogHeader>
@@ -487,7 +489,7 @@ function ExportModal({ filters }: { filters: ExportFilters }) {
         <div className="space-y-5 py-2">
           {/* Active filters summary */}
           {(filters.dateFrom || filters.dateTo || filters.search) && (
-            <div className="px-3 py-2 rounded-lg bg-sky-50 dark:bg-sky-900/20 text-xs text-sky-700 dark:text-sky-300 space-y-0.5">
+            <div className="px-3 py-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-xs text-indigo-700 dark:text-indigo-300 space-y-0.5">
               <p className="font-medium">Export will apply current page filters:</p>
               {filters.dateFrom && <p>From: {filters.dateFrom}</p>}
               {filters.dateTo   && <p>To: {filters.dateTo}</p>}
@@ -514,9 +516,9 @@ function ExportModal({ filters }: { filters: ExportFilters }) {
               })}
             </div>
             <div className="mt-1.5 flex gap-2">
-              <button className="text-[10px] text-sky-600 hover:text-sky-700" onClick={() => setSelCats(new Set(CATEGORIES.map(c => c.key)))}>Select all</button>
+              <button className="text-[10px] text-indigo-600 hover:text-indigo-700" onClick={() => setSelCats(new Set(CATEGORIES.map(c => c.key)))}>Select all</button>
               <span className="text-[10px] text-gray-300 dark:text-gray-600">·</span>
-              <button className="text-[10px] text-sky-600 hover:text-sky-700" onClick={() => setSelCats(new Set())}>Clear</button>
+              <button className="text-[10px] text-indigo-600 hover:text-indigo-700" onClick={() => setSelCats(new Set())}>Clear</button>
             </div>
           </div>
 
@@ -525,11 +527,11 @@ function ExportModal({ filters }: { filters: ExportFilters }) {
             <div className="flex items-center justify-between mb-2">
               <Label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Fields to include</Label>
               <div className="flex gap-2">
-                <button className="text-[10px] text-sky-600 hover:text-sky-700" onClick={() => setSelFields(new Set(availableFields.map(f => f.key)))}>All</button>
+                <button className="text-[10px] text-indigo-600 hover:text-indigo-700" onClick={() => setSelFields(new Set(availableFields.map(f => f.key)))}>All</button>
                 <span className="text-[10px] text-gray-300 dark:text-gray-600">·</span>
-                <button className="text-[10px] text-sky-600 hover:text-sky-700" onClick={() => setSelFields(new Set(COMMON_FIELDS.map(f => f.key)))}>Common only</button>
+                <button className="text-[10px] text-indigo-600 hover:text-indigo-700" onClick={() => setSelFields(new Set(COMMON_FIELDS.map(f => f.key)))}>Common only</button>
                 <span className="text-[10px] text-gray-300 dark:text-gray-600">·</span>
-                <button className="text-[10px] text-sky-600 hover:text-sky-700" onClick={() => setSelFields(new Set())}>None</button>
+                <button className="text-[10px] text-indigo-600 hover:text-indigo-700" onClick={() => setSelFields(new Set())}>None</button>
               </div>
             </div>
             {/* Common fields */}
@@ -541,7 +543,7 @@ function ExportModal({ filters }: { filters: ExportFilters }) {
                     type="checkbox"
                     checked={selFields.has(f.key)}
                     onChange={() => toggleField(f.key)}
-                    className="rounded border-gray-300 dark:border-white/20 text-sky-600 focus:ring-sky-500"
+                    className="rounded border-gray-300 dark:border-white/20 text-indigo-600 focus:ring-indigo-500"
                   />
                   <span className="text-xs text-gray-700 dark:text-gray-300">{f.label}</span>
                 </label>
@@ -561,7 +563,7 @@ function ExportModal({ filters }: { filters: ExportFilters }) {
                         type="checkbox"
                         checked={selFields.has(f.key)}
                         onChange={() => toggleField(f.key)}
-                        className="rounded border-gray-300 dark:border-white/20 text-sky-600 focus:ring-sky-500"
+                        className="rounded border-gray-300 dark:border-white/20 text-indigo-600 focus:ring-indigo-500"
                       />
                       <span className="text-xs text-gray-700 dark:text-gray-300">{f.label}</span>
                     </label>
@@ -579,7 +581,7 @@ function ExportModal({ filters }: { filters: ExportFilters }) {
                 <button
                   key={f}
                   onClick={() => setFormat(f)}
-                  className={`flex-1 py-2 rounded-lg border text-xs font-medium transition-all ${format === f ? 'bg-sky-600 text-white border-sky-600' : 'text-gray-500 dark:text-gray-400 border-gray-200 dark:border-white/10 hover:border-gray-300'}`}
+                  className={`flex-1 py-2 rounded-lg border text-xs font-medium transition-all ${format === f ? 'bg-indigo-600 text-white border-indigo-600' : 'text-gray-500 dark:text-gray-400 border-gray-200 dark:border-white/10 hover:border-gray-300'}`}
                 >
                   {f.toUpperCase()}
                 </button>
@@ -593,7 +595,7 @@ function ExportModal({ filters }: { filters: ExportFilters }) {
               {fetchedCount !== null ? `~${fetchedCount.toLocaleString()} records` : '— records'} · {selFields.size} of {availableFields.length} fields
             </span>
             <Button
-              className="bg-sky-600 hover:bg-sky-700 h-8 text-xs"
+              className="bg-indigo-600 hover:bg-indigo-700 h-8 text-xs"
               onClick={doExport}
               disabled={selCats.size === 0 || selFields.size === 0 || exporting}
             >
@@ -776,7 +778,7 @@ export default function AuditPage() {
     setPage(1)
     setActiveCats(s => {
       const n = new Set(s)
-      n.has(key) ? n.delete(key) : n.add(key)
+      if (n.has(key)) n.delete(key); else n.add(key)
       return n
     })
   }
@@ -833,7 +835,7 @@ export default function AuditPage() {
         <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
           {[
             { label: 'Total Events',      value: total,             color: 'text-gray-900 dark:text-white' },
-            { label: 'Load Events',       value: stats.loads,       color: 'text-sky-600 dark:text-sky-400' },
+            { label: 'Load Events',       value: stats.loads,       color: 'text-indigo-600 dark:text-indigo-400' },
             { label: 'Carrier Events',    value: stats.carriers,    color: 'text-amber-600 dark:text-amber-400' },
             { label: 'Customer Events',   value: stats.customers,   color: 'text-green-600 dark:text-green-400' },
             { label: 'Invoice Events',    value: stats.invoices,    color: 'text-violet-600 dark:text-violet-400' },
@@ -915,7 +917,7 @@ export default function AuditPage() {
           <CardHeader className="py-3 px-4 border-b dark:border-white/10">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                <ClipboardList className="h-4 w-4 text-sky-500" />
+                <ClipboardList className="h-4 w-4 text-indigo-500" />
                 {`${logs.length} events`}
               </CardTitle>
               <span className="text-xs text-gray-400 dark:text-gray-500">Click any row to expand full diff</span>
@@ -924,7 +926,7 @@ export default function AuditPage() {
           <CardContent className="p-0">
             {loading ? (
               <div className="flex items-center justify-center py-16">
-                <Loader2 className="h-6 w-6 animate-spin text-sky-500" />
+                <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -976,7 +978,7 @@ export default function AuditPage() {
                       key={p}
                       variant={p === page ? 'default' : 'outline'}
                       size="sm"
-                      className={`h-7 w-7 p-0 text-xs ${p === page ? 'bg-sky-600 hover:bg-sky-700 border-sky-600' : ''}`}
+                      className={`h-7 w-7 p-0 text-xs ${p === page ? 'bg-indigo-600 hover:bg-indigo-700 border-indigo-600' : ''}`}
                       onClick={() => setPage(p)}
                     >
                       {p}

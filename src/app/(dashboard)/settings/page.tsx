@@ -18,6 +18,7 @@ import {
   type RolePermissions, type RoleActions,
 } from '@/lib/access'
 import { toast } from 'sonner'
+import { UserManagement } from '@/components/UserManagement'
 import { Loader2, Save, ShieldCheck, ShieldAlert, KeyRound, UserCircle, Mail, AlertTriangle, Zap } from 'lucide-react'
 
 type Json = Record<string, unknown>
@@ -65,6 +66,7 @@ export default function SettingsPage() {
 
   // ── My Account (self-service — available to every signed-in user) ──
   const [accountEmail, setAccountEmail] = useState('')
+  const [accountId, setAccountId] = useState<string | null>(null)
   const [mfaOn,    setMfaOn]    = useState<boolean | null>(null)
   const [pw1,      setPw1]      = useState('')
   const [pw2,      setPw2]      = useState('')
@@ -99,6 +101,7 @@ export default function SettingsPage() {
     ;(async () => {
       const { data: { user } } = await supabase.auth.getUser()
       setAccountEmail(user?.email ?? '')
+      setAccountId(user?.id ?? null)
       try {
         const { data } = await supabase.auth.mfa.listFactors()
         setMfaOn((data?.all ?? []).some(f => f.factor_type === 'totp' && f.status === 'verified'))
@@ -216,7 +219,7 @@ export default function SettingsPage() {
   )
 
   if (loading) {
-    return (<><Header title="Settings" subtitle="Company &amp; access configuration" /><div className="p-6"><Loader2 className="h-5 w-5 animate-spin text-sky-500" /></div></>)
+    return (<><Header title="Settings" subtitle="Company &amp; access configuration" /><div className="p-6"><Loader2 className="h-5 w-5 animate-spin text-indigo-500" /></div></>)
   }
 
   return (
@@ -229,7 +232,7 @@ export default function SettingsPage() {
 
         {tab !== 'account' && tab !== 'security' && (
           <div className="flex justify-end">
-            <Button onClick={save} disabled={!canEdit || saving} className="bg-sky-600 hover:bg-sky-700">
+            <Button onClick={save} disabled={!canEdit || saving} className="bg-indigo-600 hover:bg-indigo-700">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}<span className="ml-2">Save changes</span>
             </Button>
           </div>
@@ -242,6 +245,7 @@ export default function SettingsPage() {
             <TabsTrigger value="billing">Billing &amp; Remit</TabsTrigger>
             <TabsTrigger value="dispatch">Dispatch Defaults</TabsTrigger>
             <TabsTrigger value="permissions">Permissions</TabsTrigger>
+            {canEdit && <TabsTrigger value="users">Users</TabsTrigger>}
             {canEdit && <TabsTrigger value="security">Security</TabsTrigger>}
           </TabsList>
 
@@ -249,7 +253,7 @@ export default function SettingsPage() {
             <div className="space-y-6">
               {/* Profile */}
               <Card>
-                <CardHeader><CardTitle className="text-base flex items-center gap-2"><UserCircle className="h-4 w-4 text-sky-500" />Your account</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-base flex items-center gap-2"><UserCircle className="h-4 w-4 text-indigo-500" />Your account</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex items-center gap-2 text-sm">
                     <Mail className="h-4 w-4 text-gray-400" />
@@ -264,7 +268,7 @@ export default function SettingsPage() {
 
               {/* Change password */}
               <Card>
-                <CardHeader><CardTitle className="text-base flex items-center gap-2"><KeyRound className="h-4 w-4 text-sky-500" />Change password</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-base flex items-center gap-2"><KeyRound className="h-4 w-4 text-indigo-500" />Change password</CardTitle></CardHeader>
                 <CardContent className="space-y-4 max-w-md">
                   <div className="space-y-1">
                     <Label className="text-xs">New password</Label>
@@ -278,7 +282,7 @@ export default function SettingsPage() {
                   </div>
                   <Button onClick={changePassword}
                           disabled={pwSaving || pw1.length < 8 || pw1 !== pw2}
-                          className="bg-sky-600 hover:bg-sky-700">
+                          className="bg-indigo-600 hover:bg-indigo-700">
                     {pwSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}<span className="ml-2">Update password</span>
                   </Button>
                   <p className="text-xs text-gray-500">Use at least 8 characters. You&apos;ll stay signed in on this device.</p>
@@ -287,7 +291,7 @@ export default function SettingsPage() {
 
               {/* Two-factor */}
               <Card>
-                <CardHeader><CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-sky-500" />Two-factor authentication</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-indigo-500" />Two-factor authentication</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
                   {mfaOn === null ? (
                     <div className="flex items-center gap-2 text-sm text-gray-500"><Loader2 className="h-4 w-4 animate-spin" />Checking…</div>
@@ -303,7 +307,7 @@ export default function SettingsPage() {
                       <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 font-medium">
                         <ShieldAlert className="h-4 w-4" />Not set up — add an authenticator app to secure your account.
                       </div>
-                      <Button onClick={() => router.push('/setup-2fa')} className="bg-sky-600 hover:bg-sky-700">
+                      <Button onClick={() => router.push('/setup-2fa')} className="bg-indigo-600 hover:bg-indigo-700">
                         <ShieldCheck className="h-4 w-4" /><span className="ml-2">Set up two-factor auth</span>
                       </Button>
                     </>
@@ -419,11 +423,17 @@ export default function SettingsPage() {
           </TabsContent>
 
           {canEdit && (
+            <TabsContent value="users">
+              <UserManagement isMasterAdmin={isMasterAdmin} currentUserId={accountId} />
+            </TabsContent>
+          )}
+
+          {canEdit && (
             <TabsContent value="security">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4 text-sky-500" />Company 2FA Policy
+                    <ShieldCheck className="h-4 w-4 text-indigo-500" />Company 2FA Policy
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 max-w-2xl">
@@ -441,7 +451,7 @@ export default function SettingsPage() {
                           <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Require 2FA for all staff</p>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                             {require2fa
-                              ? 'Every admin, broker, carrier-sales, and accounting user must set up 2FA before using the app.'
+                              ? 'Every admin, dispatcher, back-office, and sales user must set up 2FA before using the app.'
                               : '2FA is optional — staff can sign in with just a password unless they enable it themselves in My Account.'}
                           </p>
                         </div>

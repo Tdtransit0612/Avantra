@@ -18,7 +18,7 @@ export default function PendingPage() {
       <div className="max-w-md w-full text-center space-y-6">
         <div className="flex justify-center">
           <div className="relative">
-            <Snowflake className="h-16 w-16 text-sky-500" />
+            <Snowflake className="h-16 w-16 text-indigo-500" />
             <Clock className="h-6 w-6 text-yellow-400 absolute -bottom-1 -right-1 bg-gray-950 rounded-full" />
           </div>
         </div>
@@ -34,16 +34,16 @@ export default function PendingPage() {
           <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">What happens next</p>
           <ul className="space-y-1.5 text-sm text-gray-300">
             <li className="flex items-start gap-2">
-              <span className="text-sky-500 mt-0.5">1.</span>
+              <span className="text-indigo-500 mt-0.5">1.</span>
               Your admin logs into the TMS and goes to Settings → Users
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-sky-500 mt-0.5">2.</span>
+              <span className="text-indigo-500 mt-0.5">2.</span>
               They find your account in the Pending Approval section
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-sky-500 mt-0.5">3.</span>
-              They assign you a role — then you're in
+              <span className="text-indigo-500 mt-0.5">3.</span>
+              They assign you a role — then you&rsquo;re in
             </li>
           </ul>
         </div>

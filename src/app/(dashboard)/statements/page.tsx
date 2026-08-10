@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/table'
 import { SortableTh } from '@/components/ui/SortableTh'
 import {
-  Plus, Search, Loader2, Receipt, AlertTriangle, Download, Save,
+  Plus, Search, Loader2, Receipt, AlertTriangle, Download,
   CheckCircle2, Ban, Send, Trash2, Percent,
 } from 'lucide-react'
 import { toast } from 'sonner'

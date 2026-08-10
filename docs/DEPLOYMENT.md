@@ -38,8 +38,16 @@ from `.env.local.example`.
     where email = 'you@example.com';
    ```
 
-   The self-escalation trigger blocks this from the client, which is the point;
-   the SQL editor runs as the service role and is allowed.
+   This bootstrap step needs SQL because the self-escalation trigger pins
+   `role` on any write that isn't the service role — that's what stops a user
+   promoting themselves. Once you have one admin, everybody else is approved from
+   **Settings → Users** in the app; you never need SQL for this again.
+
+6. **Optional demo data**: `supabase/seed_demo.sql` populates 3 clients, 4
+   brokers, 6 loads across the lifecycle, 2 invoices (one overdue with a trace
+   history), compliance items, and service requests, so you can evaluate a
+   populated app. Every row uses a reserved UUID prefix and the file ends with a
+   commented teardown — **run the teardown before go-live.**
 
 ### Applying later migrations
 
@@ -72,9 +80,10 @@ Create the repo **empty** on github.com (no README/gitignore/license).
 > Deploy model: **`git push` → Vercel auto-deploys from `main`.** Never also run
 > `vercel --prod` — it creates a duplicate deployment.
 
-`vercel.json` currently declares no crons. The compliance watchdog and AR chaser
-are Phase 2; add their routes before adding cron entries, or Vercel will hit a
-404 on a schedule.
+`vercel.json` declares two daily crons — the compliance watchdog (12:00 UTC) and
+the AR chaser (13:00 UTC). Both need `CRON_SECRET` set or they return 401. Daily
+schedules work on any Vercel plan tier; no upgrade needed. You can also run either
+by hand from **Agents** in the app.
 
 ---
 
@@ -164,7 +173,13 @@ Drive the real app, in this order — it walks a load end to end:
    load delivered. Confirm the fee line appears at the amount the load showed.
    Generate again for the same period: the load must NOT appear twice.
 10. **Compliance** and **Services** — confirm both list what you entered.
-11. Hit `/api/health/resend` while signed in as staff to confirm email config.
+11. **Agents → Run now** on both. The compliance watchdog should report your
+    counts; the AR chaser should flip anything past due to Overdue. If Resend is
+    configured, you get a digest email.
+12. **Settings → Users** — confirm you can see accounts and change a role. This is
+    where you approve anyone who signs up; new accounts land on **Pending** with
+    no access until you assign one.
+13. Hit `/api/health/resend` while signed in as staff to confirm email config.
 
 ---
 

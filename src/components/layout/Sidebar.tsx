@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, Columns3, Package, Users, Building2, FileText,
   Receipt, Banknote, ShieldCheck, Wrench, TrendingUp, ClipboardList,
-  Settings, LogOut, Compass,
+  Settings, LogOut, Compass, Bot,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRole } from '@/lib/role-context'
@@ -27,6 +27,7 @@ const allNavItems = [
   { href: '/compliance',  label: 'Compliance',     icon: ShieldCheck },
   { href: '/services',    label: 'Services',       icon: Wrench },
   { href: '/reports',     label: 'Reports',        icon: TrendingUp },
+  { href: '/agents',      label: 'Agents',         icon: Bot },
   { href: '/audit',       label: 'Audit Log',      icon: ClipboardList },
   { href: '/settings',    label: 'Settings',       icon: Settings },
 ]

@@ -31,7 +31,7 @@ export default function Error({
         )}
         <button
           onClick={reset}
-          className="inline-flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white font-medium px-6 py-3 rounded-lg transition-colors"
+          className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-3 rounded-lg transition-colors"
         >
           <RefreshCw className="h-4 w-4" />
           Try Again

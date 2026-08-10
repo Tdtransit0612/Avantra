@@ -184,7 +184,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
                 <div className="max-h-80 overflow-y-auto py-1">
                   {searchResults.map(r => {
                     const Icon = r.type === 'load' ? Package : r.type === 'customer' ? Building2 : r.type === 'carrier' ? Truck : FileText
-                    const color = r.type === 'load' ? 'text-sky-600 bg-sky-50 dark:bg-sky-950' : r.type === 'customer' ? 'text-green-600 bg-green-50 dark:bg-green-950' : r.type === 'carrier' ? 'text-amber-600 bg-amber-50 dark:bg-amber-950' : 'text-purple-600 bg-purple-50 dark:bg-purple-950'
+                    const color = r.type === 'load' ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950' : r.type === 'customer' ? 'text-green-600 bg-green-50 dark:bg-green-950' : r.type === 'carrier' ? 'text-amber-600 bg-amber-50 dark:bg-amber-950' : 'text-purple-600 bg-purple-50 dark:bg-purple-950'
                     return (
                       <Link key={`${r.type}-${r.id}`} href={r.href} onClick={() => { setShowSearch(false); setSearchQuery('') }} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                         <div className={`p-1.5 rounded-lg ${color}`}><Icon className="h-3.5 w-3.5" /></div>
@@ -211,7 +211,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
           <Button variant="ghost" size="icon" className="relative" onClick={() => { setShowAlerts(v => !v); setShowProfile(false) }}>
             <Bell className="h-5 w-5" />
             {alerts.length > 0 && (
-              <span className={`absolute top-1 right-1 h-4 w-4 rounded-full text-white text-[10px] font-bold flex items-center justify-center ${criticalCount > 0 ? 'bg-red-500' : 'bg-sky-500'}`}>
+              <span className={`absolute top-1 right-1 h-4 w-4 rounded-full text-white text-[10px] font-bold flex items-center justify-center ${criticalCount > 0 ? 'bg-red-500' : 'bg-indigo-500'}`}>
                 {alerts.length > 9 ? '9+' : alerts.length}
               </span>
             )}
@@ -248,8 +248,8 @@ export default function Header({ title, subtitle }: HeaderProps) {
         {/* Profile */}
         <div className="relative" ref={profileRef}>
           <button onClick={() => { setShowProfile(v => !v); setShowAlerts(false) }}>
-            <Avatar className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-sky-400 transition-all">
-              <AvatarFallback className="bg-sky-600 text-white text-sm">{userInitials}</AvatarFallback>
+            <Avatar className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-indigo-400 transition-all">
+              <AvatarFallback className="bg-indigo-600 text-white text-sm">{userInitials}</AvatarFallback>
             </Avatar>
           </button>
 

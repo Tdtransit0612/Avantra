@@ -21,7 +21,7 @@ import { SortableTh } from '@/components/ui/SortableTh'
 import { DocumentsPanel } from '@/components/DocumentsPanel'
 import {
   Plus, Search, Loader2, FileText, AlertTriangle, Download, Phone,
-  Banknote, Clock, Save, CheckCircle2, Ban, PackageCheck,
+  Banknote, Clock, CheckCircle2, Ban, PackageCheck,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
@@ -632,6 +632,10 @@ export default function InvoicingPage() {
     return r.dba_name || r.legal_name || r.name || '—'
   }, [])
 
+  // Pinned once per mount. Reading the clock during render makes the filter
+  // impure — the same inputs would produce different rows as time passes.
+  const [mountedAt] = useState(() => Date.now())
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     return invoices.filter(i => {
@@ -643,7 +647,7 @@ export default function InvoicingPage() {
         // Past due and either never chased or not chased in the last week.
         if (!OPEN_INVOICE_STATUSES.includes(i.status) || daysPastDue(i.due_date) <= 0) return false
         const last = i.last_traced_at ? new Date(i.last_traced_at).getTime() : 0
-        if (Date.now() - last < 7 * 86_400_000) return false
+        if (mountedAt - last < 7 * 86_400_000) return false
       } else if (filter !== 'all' && i.status !== filter) {
         return false
       }
@@ -654,7 +658,7 @@ export default function InvoicingPage() {
       ].filter(Boolean).join(' ').toLowerCase()
       return hay.includes(q)
     })
-  }, [invoices, filter, search, clients, brokers, nameOf])
+  }, [invoices, filter, search, clients, brokers, nameOf, mountedAt])
 
   const { sorted, sort, toggle } = useSort<Invoice, InvoiceSortKey>(filtered, INVOICE_SORT)
 

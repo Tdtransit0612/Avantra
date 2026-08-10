@@ -48,7 +48,7 @@ export function isStaffRole(role: string | null | undefined): boolean {
 // Every navigable page key. Admin / master-admin always get all of them.
 export const ALL_NAV_KEYS = [
   'board', 'loads', 'clients', 'brokers', 'invoicing', 'statements',
-  'factoring', 'compliance', 'services', 'reports', 'audit', 'settings',
+  'factoring', 'compliance', 'services', 'reports', 'agents', 'audit', 'settings',
 ] as const
 
 // URL segments that don't map 1-to-1 to their nav key (sub-pages of a module).
@@ -119,7 +119,7 @@ export const DEFAULT_PERMISSIONS: RolePermissions = {
     nav: {
       board: true, loads: true, clients: true, brokers: true, invoicing: false,
       statements: false, factoring: false, compliance: true, services: true,
-      reports: false, audit: false, settings: false,
+      reports: false, agents: true, audit: false, settings: false,
     },
     canModify: true,
     actions: DEFAULT_ACTIONS.dispatcher,
@@ -128,7 +128,7 @@ export const DEFAULT_PERMISSIONS: RolePermissions = {
     nav: {
       board: true, loads: true, clients: true, brokers: true, invoicing: true,
       statements: true, factoring: true, compliance: true, services: true,
-      reports: true, audit: true, settings: false,
+      reports: true, agents: true, audit: true, settings: false,
     },
     canModify: true,
     actions: DEFAULT_ACTIONS.back_office,
@@ -137,7 +137,7 @@ export const DEFAULT_PERMISSIONS: RolePermissions = {
     nav: {
       board: false, loads: true, clients: true, brokers: true, invoicing: false,
       statements: false, factoring: false, compliance: true, services: true,
-      reports: false, audit: false, settings: false,
+      reports: false, agents: false, audit: false, settings: false,
     },
     canModify: true,
     actions: DEFAULT_ACTIONS.sales,

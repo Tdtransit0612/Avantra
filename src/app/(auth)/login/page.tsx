@@ -2,12 +2,14 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { supabaseConfigured } from '@/lib/supabase/config'
+import SetupRequired from '@/components/SetupRequired'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Snowflake, Loader2, Mail, CheckCircle, ShieldCheck, Lock } from 'lucide-react'
+import { Compass, Loader2, Mail, CheckCircle, ShieldCheck, Lock } from 'lucide-react'
 import { Suspense } from 'react'
 
 // ── Lockout helpers ───────────────────────────────────────────────────────────
@@ -170,10 +172,10 @@ function LoginForm() {
         <div className="w-full max-w-md">
           <div className="flex flex-col items-center mb-8">
             <div className="bg-indigo-600 p-3 rounded-xl mb-3">
-              <Snowflake className="h-8 w-8 text-white" />
+              <Compass className="h-8 w-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-white">Avantra</h1>
-            <p className="text-gray-400 text-sm mt-1">Reefer Freight Brokerage</p>
+            <p className="text-gray-400 text-sm mt-1">Carrier Services</p>
           </div>
           <Card>
             <CardContent className="pt-6 text-center space-y-4">
@@ -213,7 +215,7 @@ function LoginForm() {
         <div className="w-full max-w-md">
           <div className="flex flex-col items-center mb-8">
             <div className="bg-indigo-600 p-3 rounded-xl">
-              <Snowflake className="h-8 w-8 text-white" />
+              <Compass className="h-8 w-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-white mt-3">Two-Factor Auth</h1>
             <p className="text-gray-400 text-sm mt-1">Enter the code from your authenticator app</p>
@@ -260,11 +262,11 @@ function LoginForm() {
         <div className="flex flex-col items-center mb-8">
           <div className="flex items-center gap-3 mb-2">
             <div className="bg-indigo-600 p-3 rounded-xl">
-              <Snowflake className="h-8 w-8 text-white" />
+              <Compass className="h-8 w-8 text-white" />
             </div>
           </div>
           <h1 className="text-2xl font-bold text-white mt-3">Avantra</h1>
-          <p className="text-gray-400 text-sm mt-1">Reefer Freight Brokerage</p>
+          <p className="text-gray-400 text-sm mt-1">Carrier Services</p>
         </div>
 
         {/* Idle timeout notice */}
@@ -388,6 +390,10 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
+  // There is nothing to sign in to before Supabase exists, and LoginForm builds
+  // a client on submit — so explain the setup rather than failing at the button.
+  if (!supabaseConfigured()) return <SetupRequired />
+
   return (
     <Suspense fallback={<div className="min-h-screen bg-gray-900" />}>
       <LoginForm />

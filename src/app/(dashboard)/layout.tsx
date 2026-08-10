@@ -6,6 +6,8 @@ import Sidebar from '@/components/layout/Sidebar'
 import IdleWarningModal from '@/components/IdleWarningModal'
 import { RoleProvider, useRole } from '@/lib/role-context'
 import { navKeyForPath } from '@/lib/access'
+import { supabaseConfigured } from '@/lib/supabase/config'
+import SetupRequired from '@/components/SetupRequired'
 import { Compass, Clock } from 'lucide-react'
 
 function AccessGate({ children }: { children: React.ReactNode }) {
@@ -67,6 +69,10 @@ function AccessGate({ children }: { children: React.ReactNode }) {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  // Bail before RoleProvider — it builds a Supabase client on mount, which
+  // throws when the project isn't configured.
+  if (!supabaseConfigured()) return <SetupRequired />
+
   return (
     <RoleProvider>
       <AccessGate>{children}</AccessGate>

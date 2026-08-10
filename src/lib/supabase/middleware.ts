@@ -1,6 +1,9 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { isRouteAllowed, type RolePermissions } from '@/lib/access'
+import {
+  SUPABASE_URL, SUPABASE_ANON_KEY, supabaseConfigured, missingSupabaseVars,
+} from '@/lib/supabase/config'
 
 // ── CSP nonce helper ──────────────────────────────────────────────────────────
 // Generates a fresh per-request nonce and the matching Content-Security-Policy.
@@ -52,9 +55,22 @@ export async function updateSession(request: NextRequest) {
     request: { headers: requestHeaders },
   })
 
+  // Not configured yet (fresh clone, no .env.local): pass the request straight
+  // through instead of letting createServerClient throw. Every route would 500
+  // otherwise — including /login — with nothing on screen saying why. The pages
+  // render a setup screen in this state; there is no security cost, because with
+  // no Supabase there is no session and no data to protect.
+  if (!supabaseConfigured()) {
+    console.warn(
+      `[proxy] Supabase is not configured — missing ${missingSupabaseVars().join(', ')}. ` +
+      'Copy .env.local.example to .env.local and fill it in. Auth is disabled until then.',
+    )
+    return stamp(supabaseResponse)
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY,
     {
       cookies: {
         getAll() {

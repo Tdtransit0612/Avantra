@@ -51,29 +51,44 @@ export default function DashboardPage() {
   const [services, setServices] = useState<ServiceRequest[]>([])
   const [compliance, setCompliance] = useState<ComplianceItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    let cancelled = false
     const supabase = createClient()
     ;(async () => {
-      // Every query is RLS-gated, so a role without access simply gets an empty
-      // set rather than an error — the tiles below then render zeros and the
-      // links stay hidden by the nav check.
-      const [l, i, c, s, sr, ci] = await Promise.all([
-        supabase.from('loads').select('*').is('deleted_at', null).order('pickup_date', { ascending: true, nullsFirst: false }).limit(500),
-        supabase.from('invoices').select('*').limit(1000),
-        supabase.from('clients').select('*').is('deleted_at', null).limit(500),
-        supabase.from('client_statements').select('*').limit(500),
-        supabase.from('service_requests').select('*').limit(500),
-        supabase.from('compliance_items').select('*').limit(1000),
-      ])
-      setLoads((l.data ?? []) as Load[])
-      setInvoices((i.data ?? []) as Invoice[])
-      setClients((c.data ?? []) as Client[])
-      setStatements((s.data ?? []) as ClientStatement[])
-      setServices((sr.data ?? []) as ServiceRequest[])
-      setCompliance((ci.data ?? []) as ComplianceItem[])
-      setLoading(false)
+      try {
+        // Every query is RLS-gated, so a role without access simply gets an empty
+        // set rather than an error — the tiles below then render zeros and the
+        // links stay hidden by the nav check.
+        const [l, i, c, s, sr, ci] = await Promise.all([
+          supabase.from('loads').select('*').is('deleted_at', null).order('pickup_date', { ascending: true, nullsFirst: false }).limit(500),
+          supabase.from('invoices').select('*').limit(1000),
+          supabase.from('clients').select('*').is('deleted_at', null).limit(500),
+          supabase.from('client_statements').select('*').limit(500),
+          supabase.from('service_requests').select('*').limit(500),
+          supabase.from('compliance_items').select('*').limit(1000),
+        ])
+        if (cancelled) return
+
+        // Report the first real failure rather than silently rendering zeros —
+        // an empty dashboard and a broken dashboard look identical otherwise.
+        const failed = [l, i, c, s, sr, ci].find(r => r.error)
+        if (failed?.error) { setError(failed.error.message); return }
+
+        setLoads((l.data ?? []) as Load[])
+        setInvoices((i.data ?? []) as Invoice[])
+        setClients((c.data ?? []) as Client[])
+        setStatements((s.data ?? []) as ClientStatement[])
+        setServices((sr.data ?? []) as ServiceRequest[])
+        setCompliance((ci.data ?? []) as ComplianceItem[])
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Could not reach the server.')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     })()
+    return () => { cancelled = true }
   }, [])
 
   const can = (key: string) => isAdmin || isMasterAdmin || allowedNav.has(key)
@@ -145,6 +160,32 @@ export default function DashboardPage() {
     if (!id) return '—'
     const c = clients.find(x => x.id === id)
     return c ? (c.dba_name || c.legal_name) : '—'
+  }
+
+  if (error) {
+    return (
+      <>
+        <Header title="Dashboard" subtitle="Something went wrong" />
+        <div className="p-6">
+          <Card>
+            <CardContent className="py-8 space-y-3">
+              <div className="flex items-center gap-2 text-red-600 dark:text-red-400 font-medium">
+                <AlertTriangle className="h-5 w-5" />Couldn&apos;t load the dashboard
+              </div>
+              <code className="block text-xs bg-gray-100 dark:bg-white/5 rounded p-3 break-words text-gray-700 dark:text-gray-300">
+                {error}
+              </code>
+              <button
+                onClick={() => window.location.reload()}
+                className="rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 transition-colors"
+              >
+                Retry
+              </button>
+            </CardContent>
+          </Card>
+        </div>
+      </>
+    )
   }
 
   if (loading) {

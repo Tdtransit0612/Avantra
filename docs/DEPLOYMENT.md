@@ -6,14 +6,22 @@ domain." Written to be turnkey.
 ## Current state
 
 - ✅ **Code** — full Phase-1 app. `npm run typecheck` + `npm run build` green.
-- ✅ **Schema** — 6 idempotent migrations in `supabase/migrations/`, plus a
-  combined `supabase/setup.sql` that applies all of them in one paste.
-- ⬜ **Supabase project** — not created yet. You create it; you own the keys.
-- ⬜ **GitHub remote, Vercel project, custom domain.**
-- ⬜ **Feature API keys** (Resend, Google Maps, FMCSA).
+- ✅ **Schema** — 6 idempotent migrations, applied and verified live
+  (`supabase/verify.sql` → 10/10 PASS).
+- ✅ **Supabase project** — created, region `us-east-2`. Admin account
+  `adamg@tdtransit.com` is admin + master admin.
+- ✅ **GitHub** — https://github.com/Tdtransit0612/Avantra (branch `main`).
+- ✅ **Money engine verified against the live DB** — 25 assertions covering the
+  fee percentage, the fee minimum, linehaul-vs-gross basis, waived and
+  cancelled loads, the trigger-owned columns rejecting hand-written values,
+  the statement double-bill guard, and RLS denying anonymous reads.
+- ✅ **Public tracking page verified in a browser** — shows lane and public
+  check-ins, exposes no rate, fee, net, broker identity, or internal note.
+- ⬜ **Vercel project + custom domain.**
+- ⬜ **Feature API keys** (Resend, Google Maps, FMCSA) — all optional.
 
-Nothing in this repo contains a credential. `.env.local` is gitignored; start
-from `.env.local.example`.
+Nothing in this repo contains a credential. `.env.local` is gitignored and has
+never been committed; start from `.env.local.example`.
 
 ---
 
@@ -67,12 +75,13 @@ the migrations — don't hand-edit it.
 
 ```bash
 cd C:/Users/adamg/Desktop/avantra
-git remote add origin https://github.com/<you>/avantra.git
+git remote add origin https://github.com/Tdtransit0612/Avantra.git
 git branch -M main
 git push -u origin main
 ```
 
-Create the repo **empty** on github.com (no README/gitignore/license).
+Already done — the remote is live at https://github.com/Tdtransit0612/Avantra with
+5 commits on `main`. Subsequent work just needs `git push`.
 
 ---
 

@@ -23,13 +23,19 @@ from `.env.local.example`.
    you (`us-east-2` matches the other projects). Save the database password.
 2. **SQL Editor → New query.** Paste the whole of `supabase/setup.sql` and Run.
    It is idempotent, so a re-run is safe if something half-applied.
-3. Verify it took: Table Editor should show `clients`, `brokers`, `loads`,
-   `invoices`, `client_statements`, `compliance_items`, `service_requests`,
-   `documents`, and Storage should show a **private** `documents` bucket.
-4. **Authentication → Providers → Email**: enable. Turn OFF public sign-ups once
+3. **Verify it applied.** New query → paste `supabase/verify.sql` → Run. All 10
+   rows must say **PASS**. It reads only the system catalogs, so it still returns a
+   full report if the migration half-applied rather than erroring out.
+
+   > setup.sql’s own output is a grid headed `_reset_policies` with an empty cell.
+   > That is expected — `select public._reset_policies(...)` returns void and is the
+   > last result set the editor sees. A real failure is a red ERROR message.
+4. Spot check: Table Editor should show **21 tables**, and Storage a **private**
+   `documents` bucket.
+5. **Authentication → Providers → Email**: enable. Turn OFF public sign-ups once
    your own staff accounts exist, or leave on and rely on the `pending` role
    (new users land there with zero access until an admin promotes them).
-5. **Create your admin account**: sign up through the app at `/login`, then in
+6. **Create your admin account**: sign up through the app at `/login`, then in
    the SQL editor run — replacing the email —
 
    ```sql
@@ -43,7 +49,7 @@ from `.env.local.example`.
    promoting themselves. Once you have one admin, everybody else is approved from
    **Settings → Users** in the app; you never need SQL for this again.
 
-6. **Optional demo data**: `supabase/seed_demo.sql` populates 3 clients, 4
+7. **Optional demo data**: `supabase/seed_demo.sql` populates 3 clients, 4
    brokers, 6 loads across the lifecycle, 2 invoices (one overdue with a trace
    history), compliance items, and service requests, so you can evaluate a
    populated app. Every row uses a reserved UUID prefix and the file ends with a

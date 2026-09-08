@@ -6,7 +6,8 @@ owner-operators and small fleets. We act as their agent: source their freight,
 dispatch it, handle the paperwork, invoice the broker in their name, chase the
 money, and keep their compliance current. We bill them a **dispatch fee**.
 
-Standalone project (own repo / Supabase / Vercel / domain). It reuses proven,
+Runs at **avantracs.app**; the marketing site is a separate project at
+**avantracs.com**. Standalone (own repo / Supabase / Vercel / domain). It reuses proven,
 business-agnostic plumbing from the Cryolane and Top Dawg codebases (auth/RBAC,
 signed-URL document security, cron-agent + Resend automation, pdf-lib generators,
 the shadcn UI kit, the service-role write pattern) but the domain model is built

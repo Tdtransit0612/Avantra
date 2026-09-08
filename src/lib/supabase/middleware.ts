@@ -163,9 +163,9 @@ export async function updateSession(request: NextRequest) {
     if ((role === 'carrier' || role === 'shipper') && !isApiRoute) {
       let portalUrl: URL
       try {
-        portalUrl = new URL(process.env.NEXT_PUBLIC_PORTAL_URL || 'https://avantra.com/portal')
+        portalUrl = new URL(process.env.NEXT_PUBLIC_PORTAL_URL || 'https://avantracs.com/portal')
       } catch {
-        portalUrl = new URL('https://avantra.com/portal') // never let a bad env var 500 the session
+        portalUrl = new URL('https://avantracs.com/portal') // never let a bad env var 500 the session
       }
       return stamp(NextResponse.redirect(portalUrl))
     }

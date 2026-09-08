@@ -102,13 +102,32 @@ by hand from **Agents** in the app.
 
 ---
 
-## 4. Domain
+## 4. Domains
 
-1. Vercel → the project → **Settings → Domains → Add** your domain.
-2. At your registrar, add the DNS records Vercel shows.
-3. Once it resolves, set `NEXT_PUBLIC_APP_URL` and `NEXT_PUBLIC_TRACK_BASE_URL`
-   to the final `https://…` and redeploy. The tracking links you hand brokers are
-   built from these, so they must be the real domain, not the `.vercel.app` host.
+Two domains, two Vercel projects:
+
+| Domain | What | Project |
+|---|---|---|
+| `avantracs.app` | The TMS (this repo) | `Avantra` |
+| `avantracs.com` | Marketing site | `avantracs-web` (separate repo) |
+
+### Pointing avantracs.app at this project
+
+1. Vercel → the `Avantra` project → **Settings → Domains → Add** `avantracs.app`.
+2. At your registrar, add the DNS records Vercel shows. For an apex domain that
+   is usually an `A` record to Vercel’s anycast IP; for `www` a `CNAME`.
+3. Once it resolves, set these and **redeploy** — env vars are baked in at
+   build time, so an existing deployment will not pick them up:
+
+   | Variable | Value |
+   |---|---|
+   | `NEXT_PUBLIC_APP_URL` | `https://avantracs.app` |
+   | `NEXT_PUBLIC_TRACK_BASE_URL` | `https://avantracs.app/track` |
+   | `NEXT_PUBLIC_PORTAL_URL` | `https://avantracs.com/portal` (future client portal) |
+
+   The tracking links you hand brokers are built from these, so they must be the
+   real domain and not the `.vercel.app` host — a relative link is broken inside
+   an email client.
 
 ---
 

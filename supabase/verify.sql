@@ -32,7 +32,8 @@ expected_functions(fn) as (values
   ('sync_statement_line_void'), -- 09: releases a voided statement's loads
   ('inherit_statement_line_void'),
   ('record_statement_payment'), -- 09: payments accumulate atomically
-  ('record_invoice_payment')
+  ('record_invoice_payment'),
+  ('pin_load_fee_terms')       -- 10: fee terms pinned at booking
 ),
 expected_sequences(sq) as (values
   ('client_number_seq'),('load_number_seq'),('invoice_number_seq'),
@@ -40,13 +41,13 @@ expected_sequences(sq) as (values
 ),
 results(sort_order, check_name, expected, actual) as (
 
-  select 1, 'Tables created', 21,
+  select 1, 'Tables created', 23,
     (select count(*)::int from pg_tables t
       join expected_tables e on e.tbl = t.tablename
      where t.schemaname = 'public')
 
   union all
-  select 2, 'RLS enabled on every table', 21,
+  select 2, 'RLS enabled on every table', 23,
     (select count(*)::int from pg_class c
       join pg_namespace n on n.oid = c.relnamespace
       join expected_tables e on e.tbl = c.relname
@@ -55,13 +56,16 @@ results(sort_order, check_name, expected, actual) as (
   union all
   -- RLS on with zero policies denies everything, so presence matters as much as
   -- the flag above.
-  select 3, 'Tables with >=1 RLS policy', 21,
+  -- 22, not 23: login_attempts deliberately has RLS on and NO policies, so only
+  -- the service role reaches it. Failed-login history has no business being
+  -- readable from a browser.
+  select 3, 'Tables with >=1 RLS policy', 22,
     (select count(distinct p.tablename)::int from pg_policies p
       join expected_tables e on e.tbl = p.tablename
      where p.schemaname = 'public')
 
   union all
-  select 4, 'Helper + trigger functions', 20,
+  select 4, 'Helper + trigger functions', 27,
     (select count(distinct p.proname)::int from pg_proc p
       join pg_namespace n on n.oid = p.pronamespace
       join expected_functions e on e.fn = p.proname
@@ -76,7 +80,8 @@ results(sort_order, check_name, expected, actual) as (
   union all
   -- The money engine: set_number + recalc_money + updated_at. Without recalc,
   -- gross_total / dispatch_fee / net_to_client stay 0 on every load.
-  select 6, 'Triggers on loads', 3,
+  -- 4 since migration 10 added trg_loads_fee_terms.
+  select 6, 'Triggers on loads', 4,
     (select count(*)::int from pg_trigger t
       join pg_class c on c.oid = t.tgrelid
       join pg_namespace n on n.oid = c.relnamespace
@@ -111,6 +116,21 @@ results(sort_order, check_name, expected, actual) as (
      where n.nspname = 'public'
        and p.proname in ('get_load_tracking','get_load_tracking_events')
        and has_function_privilege('anon', p.oid, 'EXECUTE'))
+
+  union all
+  -- The control that replaced hidden buttons. A staff session can reach
+  -- PostgREST directly, so these must be unwritable at the privilege level, not
+  -- merely hidden in the UI.
+  select 11, 'Load fee columns locked from browser writes', 0,
+    (select count(*)::int from unnest(array[
+            'fee_type','fee_percent','fee_flat','fee_basis','fee_minimum',
+            'fee_manual','fee_waived','fee_waived_reason','dispatch_fee']) col
+      where has_column_privilege('authenticated', 'public.loads', col, 'UPDATE'))
+
+  union all
+  select 12, 'Financial tables locked from browser writes', 0,
+    (select count(*)::int from unnest(array['invoices','client_statements']) t
+      where has_table_privilege('authenticated', 'public.' || t, 'UPDATE'))
 )
 select
   check_name,

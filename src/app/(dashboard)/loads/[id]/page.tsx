@@ -25,6 +25,7 @@ import {
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { logAudit } from '@/lib/audit'
+import { updateProtectedRow } from '@/lib/protected-write'
 import { useRole } from '@/lib/role-context'
 import {
   LOAD_STATUSES, LOAD_STATUS_LABELS, LOAD_STATUS_COLORS, NEXT_STATUS,
@@ -156,7 +157,6 @@ function MoneySheet({ load, onSaved }: { load: Load; onSaved: () => void }) {
 
   const save = async () => {
     setSaving(true)
-    const supabase = createClient()
     // gross_total / dispatch_fee / net_to_client are trigger-owned — never sent.
     const patch: Record<string, unknown> = {
       line_haul: num(f.line_haul),
@@ -175,7 +175,13 @@ function MoneySheet({ load, onSaved }: { load: Load; onSaved: () => void }) {
       patch.fee_waived = f.fee_waived
       patch.fee_waived_reason = f.fee_waived ? (f.fee_waived_reason.trim() || null) : null
     }
-    const { error } = await supabase.from('loads').update(patch).eq('id', load.id)
+    // Through the staff-gated endpoint, not the browser client. canOverrideFee
+    // above is a UI affordance — it hides the fields, it does not stop anyone.
+    // RLS is `for all using (is_staff())`, so any dispatcher or sales user could
+    // open devtools and zero out a load's dispatch fee directly. The endpoint
+    // re-checks role and column server-side, and migration 10 revokes UPDATE on
+    // the fee columns from `authenticated` so the direct path no longer exists.
+    const { error } = await updateProtectedRow('loads', load.id, patch)
     setSaving(false)
     if (error) { toast.error(error.message); return }
     void logAudit('load.money_update', {

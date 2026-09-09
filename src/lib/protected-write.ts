@@ -9,7 +9,15 @@
 // mirrors a supabase-js result (`{ error }` with `.message`) so call sites can
 // keep their existing `if (error) { … }` handling.
 
-export type ProtectedTable = 'carriers' | 'customers' | 'loads' | 'invoices' | 'carrier_settlements'
+// Must match ALLOWED_TABLES in /api/protected/update. This list was inherited
+// from the brokerage skeleton and still named carriers / customers /
+// carrier_settlements — three tables that have never existed in this schema —
+// which is how you can tell the helper was ported and never wired up. Every
+// money write went straight from the browser instead, leaving the endpoint's
+// whole table+column+role matrix as dead code.
+export type ProtectedTable =
+  | 'clients' | 'brokers' | 'loads' | 'invoices'
+  | 'client_statements' | 'compliance_items' | 'service_requests'
 
 export type ProtectedWriteError = Error & { code?: string }
 

@@ -26,6 +26,7 @@ import {
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { logAudit } from '@/lib/audit'
+import { updateProtectedRow } from '@/lib/protected-write'
 import { useRole } from '@/lib/role-context'
 import { downloadCSV } from '@/lib/csv'
 import { useSort, type SortAccessors } from '@/lib/use-sort'
@@ -313,10 +314,13 @@ function InvoiceSheet({
   const stillOwed = Math.max(0, (invoice.amount ?? 0) - (invoice.amount_paid ?? 0))
   useEffect(() => { setPay(p => ({ ...p, amount_paid: String(stillOwed) })) }, [stillOwed])
 
+  // Staff-gated endpoint, not the browser client. Voiding an invoice needs
+  // canVoidInvoices and marking one paid needs canRecordPayment — but RLS is
+  // `for all using (is_staff())`, so those flags were UI-only and any staff role
+  // could do either from devtools. The endpoint re-checks server-side.
   const patch = async (p: Record<string, unknown>, action: string) => {
     setBusy(true)
-    const supabase = createClient()
-    const { error } = await supabase.from('invoices').update(p).eq('id', invoice.id)
+    const { error } = await updateProtectedRow('invoices', invoice.id, p)
     setBusy(false)
     if (error) { toast.error(error.message); return false }
     void logAudit(action, {
@@ -400,9 +404,12 @@ function InvoiceSheet({
     if (error) { toast.error(error.message); return }
     // The DB trigger maintains trace_count / last_traced_at / next_follow_up.
     if (trace.outcome === 'disputed' && invoice.status !== 'disputed') {
-      await supabase.from('invoices').update({
+      // Through the staff-gated endpoint like every other invoice write —
+      // migration 10 revokes UPDATE on invoices from `authenticated`, so the
+      // browser client cannot make this change directly any more.
+      await updateProtectedRow('invoices', invoice.id, {
         status: 'disputed', dispute_reason: trace.notes.trim() || 'Disputed by broker',
-      }).eq('id', invoice.id)
+      })
     }
     void logAudit('invoice.trace', {
       table_name: 'invoice_traces', record_id: invoice.id,

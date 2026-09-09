@@ -37,8 +37,30 @@ appears only as the preparing agent.
   plan must never rewrite a load that already happened, or a sent statement
   silently changes.
 - **Role changes cannot go through the browser client.**
-  `prevent_profile_privilege_escalation()` pins `profiles.role` and
-  `is_master_admin` against any non-service-role write. Use `/api/users`.
+  `prevent_profile_privilege_escalation()` pins `profiles.role`,
+  `is_master_admin`, `client_id` and `mfa_enrolled` against any non-service-role
+  write. Use `/api/users`; 2FA enrollment goes through `/api/auth/mfa-enrolled`,
+  which verifies the factor with Supabase rather than trusting the caller.
+  `client_id` is the tenancy key — unpinned, it let any signup read another
+  carrier's entire book.
+- **Money writes are enforced by column privileges, not just by UI flags.**
+  Migration 10 revokes `update` on the fee columns of `loads` and on all of
+  `invoices` / `client_statements` from `authenticated`. A hidden button is not
+  a control: RLS here is `for all using (is_staff())`, which is true for
+  dispatcher and sales too. Write these through `updateProtectedRow()` →
+  `/api/protected/update`, which re-checks table + column + role server-side.
+  Payments go through `record_statement_payment()` / `record_invoice_payment()`,
+  which accumulate atomically and check the role themselves.
+  A browser `.update()` against those columns now fails — that is the point.
+- **Fee terms are pinned at booking by `pin_load_fee_terms()`**, not just by the
+  form. Column privileges cover UPDATE but say nothing about INSERT, so without
+  it a dispatcher could simply book at `fee_percent` 0. It sorts before
+  `trg_loads_money` on purpose — `recalc_load_money()` must see the pinned
+  values.
+- **A voided statement's fee lines must release their loads.**
+  `statement_lines.voided` is maintained by trigger, and both the unique index
+  and the generator's scan ignore released lines. Without it, voiding a
+  statement made those loads permanently unbillable.
 - **The `documents` bucket is private.** Read only via `/api/doc-url` →
   `DocLink` / `DocumentsPanel`. Never `getPublicUrl`.
 - **The public `/track/<token>` page must never expose money.** It reads through

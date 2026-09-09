@@ -25,6 +25,7 @@ import {
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { logAudit } from '@/lib/audit'
+import { updateProtectedRow } from '@/lib/protected-write'
 import { useRole } from '@/lib/role-context'
 import { downloadCSV } from '@/lib/csv'
 import { useSort, type SortAccessors } from '@/lib/use-sort'
@@ -376,10 +377,14 @@ function StatementSheet({ statement, clientName, onSaved, onClose }: {
     setPay(p => ({ ...p, amount_paid: String(outstanding) }))
   }, [outstanding])
 
+  // Every statement-header write goes through the staff-gated endpoint. Sending,
+  // issuing and voting a statement void are back_office actions, but RLS is
+  // `for all using (is_staff())` — so before this, any dispatcher or sales user
+  // could void a statement straight from the browser. The endpoint re-checks
+  // role and column server-side.
   const patch = async (p: Record<string, unknown>, action: string) => {
     setBusy(true)
-    const supabase = createClient()
-    const { error } = await supabase.from('client_statements').update(p).eq('id', statement.id)
+    const { error } = await updateProtectedRow('client_statements', statement.id, p)
     setBusy(false)
     if (error) { toast.error(error.message); return false }
     void logAudit(action, {

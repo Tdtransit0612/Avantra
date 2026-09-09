@@ -39,8 +39,10 @@ export default function SetupMfaPage() {
         // to reconfigure (swap in a new authenticator device), in which case fall
         // through to the intro and let handleStart clear the old factor first.
         if (verified && !isReconfig) {
-          const { data: { user } } = await supabase.auth.getUser()
-          if (user) await supabase.from('profiles').update({ mfa_enrolled: true }).eq('id', user.id)
+          // profiles.mfa_enrolled is pinned against browser writes (migration 08),
+          // because a self-attested flag let an account switch off the control
+          // protecting it. The route re-checks the factors server-side.
+          await fetch('/api/auth/mfa-enrolled', { method: 'POST' })
           setStep('already_enrolled')
           setTimeout(() => { router.replace('/dashboard'); router.refresh() }, 1500)
           return
@@ -102,10 +104,17 @@ export default function SetupMfaPage() {
       setLoading(false)
       return
     }
-    // Mark enrolled in profiles
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      await supabase.from('profiles').update({ mfa_enrolled: true }).eq('id', user.id)
+    // Mark enrolled. This goes through the server (migration 08 pins the column
+    // against browser writes) and the route confirms the factor with Supabase
+    // rather than taking this page's word for it. If it fails the user stays
+    // un-enrolled and the middleware will send them back here — the safe way to
+    // be wrong.
+    const markRes = await fetch('/api/auth/mfa-enrolled', { method: 'POST' })
+    if (!markRes.ok) {
+      setError('Your code was accepted but we could not save it. Please try again.')
+      setCode('')
+      setLoading(false)
+      return
     }
     setLoading(false)
     setStep('done')

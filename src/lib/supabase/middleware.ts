@@ -196,12 +196,13 @@ export async function updateSession(request: NextRequest) {
     ) {
       let requireMfa = true
       try {
-        const { data: cs2fa, error: cs2faErr } = await supabase
-          .from('company_settings')
-          .select('require_2fa')
-          .limit(1)
-          .maybeSingle()
-        if (!cs2faErr && cs2fa && (cs2fa as { require_2fa?: boolean }).require_2fa === false) requireMfa = false
+        // Via the RPC, not the table: company_settings also holds Avantra's ACH
+        // details, so migration 08 closed it to admin/back_office and exposes
+        // require_2fa and role_permissions through get_app_config() instead.
+        const { data: cfg, error: cfgErr } = await supabase.rpc('get_app_config')
+        if (!cfgErr && (cfg as { require_2fa?: boolean } | null)?.require_2fa === false) {
+          requireMfa = false
+        }
       } catch { /* keep requireMfa = true */ }
       if (requireMfa) {
         const url = request.nextUrl.clone()
@@ -218,12 +219,9 @@ export async function updateSession(request: NextRequest) {
     if (role && role !== 'admin' && !isMasterAdmin) {
       let stored: RolePermissions | null = null
       try {
-        const { data: cs } = await supabase
-          .from('company_settings')
-          .select('role_permissions')
-          .limit(1)
-          .maybeSingle()
-        stored = (cs?.role_permissions as RolePermissions) ?? null
+        const { data: cfg } = await supabase.rpc('get_app_config')
+        stored = ((cfg as { role_permissions?: RolePermissions } | null)
+                    ?.role_permissions as RolePermissions) ?? null
       } catch {
         stored = null
       }

@@ -64,7 +64,12 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
 
         const [{ data: profile, error: pErr }, { data: cs }] = await Promise.all([
           supabase.from('profiles').select('role, is_master_admin').eq('id', data.user.id).single(),
-          supabase.from('company_settings').select('role_permissions').limit(1).single(),
+          // Not a direct read of company_settings: that row also carries
+          // billing_settings with Avantra's ACH routing and account numbers, and
+          // RLS is row-level so it cannot hand out one column and withhold the
+          // other. Migration 08 closed the table to admin/back_office and exposes
+          // just these two fields through a SECURITY DEFINER function.
+          supabase.rpc('get_app_config'),
         ])
         if (cancelled) return
 
@@ -74,9 +79,10 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
 
         const userRole = (profile?.role as UserRole) ?? null
         const master   = profile?.is_master_admin === true
-        // company_settings is optional: if it can't be read we fall back to the
+        // The config is optional: if it can't be read we fall back to the
         // built-in defaults rather than locking the user out.
-        const stored   = (cs?.role_permissions as RolePermissions | null) ?? null
+        const stored   = ((cs as { role_permissions?: RolePermissions } | null)
+                           ?.role_permissions as RolePermissions | null) ?? null
 
         setRole(userRole)
         setIsMasterAdmin(master)

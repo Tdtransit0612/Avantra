@@ -15,7 +15,9 @@ with expected_tables(tbl) as (values
   ('brokers'),('loads'),('load_stops'),('load_check_calls'),
   ('invoices'),('invoice_traces'),('client_statements'),('statement_lines'),
   ('compliance_items'),('service_requests'),('service_request_updates'),
-  ('documents')
+  ('documents'),
+  ('leads'),                    -- 07: marketing-site enquiries
+  ('login_attempts')            -- 08: account-lockout store
 ),
 expected_functions(fn) as (values
   ('set_updated_at'),('app_role'),('is_master'),('is_staff'),('has_role'),
@@ -23,7 +25,10 @@ expected_functions(fn) as (values
   ('set_client_number'),('app_client_id'),('set_load_number'),('recalc_load_money'),
   ('set_invoice_number'),('bump_invoice_trace_counters'),('set_statement_number'),
   ('recalc_statement_totals'),('derive_compliance_status'),('set_service_request_number'),
-  ('get_load_tracking'),('get_load_tracking_events')
+  ('get_load_tracking'),('get_load_tracking_events'),
+  ('stamp_lead_contacted'),     -- 07
+  ('get_app_config')            -- 08: the narrow read that replaced open
+                                --     SELECT on company_settings
 ),
 expected_sequences(sq) as (values
   ('client_number_seq'),('load_number_seq'),('invoice_number_seq'),

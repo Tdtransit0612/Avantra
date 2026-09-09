@@ -26,11 +26,28 @@ export async function POST(req: NextRequest) {
   const normalEmail = email.toLowerCase().trim()
   const now = new Date()
 
-  const { data: record } = await supabase
+  const { data: record, error: readErr } = await supabase
     .from('login_attempts')
     .select('*')
     .eq('email', normalEmail)
     .maybeSingle()
+
+  // Fail CLOSED. This error used to be discarded, and the consequence was not
+  // a degraded lockout but no lockout at all: the table did not exist in any
+  // migration, so every read errored, `record` came back undefined, the counter
+  // restarted at 1 on every attempt, and the endpoint cheerfully reported
+  // "4 attempts remaining" forever while allowing unlimited password guessing.
+  //
+  // A lockout store we cannot reach is indistinguishable from one that would
+  // have said "locked", so we must not answer as if it said "not locked".
+  // Refusing logins during an outage is the cheaper failure.
+  if (readErr) {
+    console.error('[login-track] lockout store unreachable:', readErr.code, readErr.message)
+    return NextResponse.json(
+      { error: 'Sign-in is temporarily unavailable. Please try again shortly.' },
+      { status: 503 },
+    )
+  }
 
   // If currently locked, return that immediately regardless of outcome
   if (record?.locked_until && new Date(record.locked_until) > now) {
@@ -54,10 +71,13 @@ export async function POST(req: NextRequest) {
 
   // ── success ──────────────────────────────────────────────────────────────
   if (outcome === 'success') {
-    await supabase.from('login_attempts').upsert(
+    const { error: resetErr } = await supabase.from('login_attempts').upsert(
       { email: normalEmail, failed_count: 0, locked_until: null, last_attempt_at: now.toISOString() },
       { onConflict: 'email' }
     )
+    // Worth logging but not worth blocking on: the user authenticated correctly,
+    // and the only cost of a missed reset is a stale counter that expires anyway.
+    if (resetErr) console.error('[login-track] could not reset counter:', resetErr.message)
     return NextResponse.json({ locked: false })
   }
 
@@ -67,7 +87,7 @@ export async function POST(req: NextRequest) {
     ? new Date(now.getTime() + LOCK_MINUTES * 60_000).toISOString()
     : null
 
-  await supabase.from('login_attempts').upsert(
+  const { error: writeErr } = await supabase.from('login_attempts').upsert(
     {
       email: normalEmail,
       failed_count: newCount,
@@ -76,6 +96,17 @@ export async function POST(req: NextRequest) {
     },
     { onConflict: 'email' }
   )
+
+  // A failed write here is the whole lockout failing: the count never persists,
+  // so the next attempt starts from zero and the threshold is never reached.
+  // Refuse rather than report a limit that is not being enforced.
+  if (writeErr) {
+    console.error('[login-track] could not record failure:', writeErr.code, writeErr.message)
+    return NextResponse.json(
+      { error: 'Sign-in is temporarily unavailable. Please try again shortly.' },
+      { status: 503 },
+    )
+  }
 
   return NextResponse.json({
     locked: !!lockedUntil,

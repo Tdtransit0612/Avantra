@@ -307,7 +307,11 @@ function InvoiceSheet({
   }, [invoice.id])
 
   useEffect(() => { fetchTraces() }, [fetchTraces])
-  useEffect(() => { setPay(p => ({ ...p, amount_paid: String(invoice.amount ?? 0) })) }, [invoice.amount])
+  // Prefill what is still OWED, not the invoice total. The field is a single
+  // payment, so on a partly-paid invoice the full amount is the one value
+  // guaranteed to be wrong.
+  const stillOwed = Math.max(0, (invoice.amount ?? 0) - (invoice.amount_paid ?? 0))
+  useEffect(() => { setPay(p => ({ ...p, amount_paid: String(stillOwed) })) }, [stillOwed])
 
   const patch = async (p: Record<string, unknown>, action: string) => {
     setBusy(true)
@@ -335,21 +339,38 @@ function InvoiceSheet({
 
   const recordPayment = async () => {
     const amt = num(pay.amount_paid)
-    const full = amt >= (invoice.amount ?? 0)
-    const ok = await patch({
-      status: full ? 'paid' : 'partial',
-      amount_paid: amt,
-      paid_date: pay.paid_date || todayISO(),
-      payment_method: pay.payment_method,
-      payment_reference: pay.payment_reference.trim() || null,
-    }, 'invoice.payment')
-    if (!ok) return
-    // Only a fully-paid invoice settles the load.
-    if (full && invoice.load_id) {
-      const supabase = createClient()
-      await supabase.from('loads').update({ status: 'paid' }).eq('id', invoice.load_id)
-    }
-    toast.success(full ? 'Invoice paid' : 'Partial payment recorded')
+    if (amt <= 0) { toast.error('Enter an amount greater than zero.'); return }
+
+    // Through an RPC, not a direct update. The entered amount is THIS payment
+    // and is added to what has already arrived — the old code replaced
+    // amount_paid outright, so a broker paying $400 then $600 against a $1,000
+    // invoice left 600 on record and the invoice stuck at 'partial', which the
+    // ar-chaser cron then escalated to 'overdue' and chased. The RPC also
+    // settles the load in the same transaction, so status and load can no
+    // longer disagree.
+    setBusy(true)
+    const supabase = createClient()
+    const { data, error } = await supabase.rpc('record_invoice_payment', {
+      p_invoice_id: invoice.id,
+      p_amount: amt,
+      p_paid_date: pay.paid_date || todayISO(),
+      p_method: pay.payment_method,
+      p_reference: pay.payment_reference.trim() || null,
+    })
+    setBusy(false)
+    if (error) { toast.error(error.message); return }
+
+    const row = data as { status?: string; amount_paid?: number } | null
+    void logAudit('invoice.payment', {
+      table_name: 'invoices', record_id: invoice.id,
+      new_value: {
+        invoice_number: invoice.invoice_number,
+        payment_amount: amt,
+        amount_paid_total: row?.amount_paid,
+      },
+    })
+    onSaved()
+    toast.success(row?.status === 'paid' ? 'Invoice paid in full' : 'Partial payment recorded')
   }
 
   const voidInvoice = async () => {
@@ -468,8 +489,15 @@ function InvoiceSheet({
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Record a payment</p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div>
-                  <Label className="text-xs text-gray-500 dark:text-gray-400">Amount received</Label>
+                  {/* "This payment" — it is added to what has already arrived,
+                      not substituted for it. */}
+                  <Label className="text-xs text-gray-500 dark:text-gray-400">This payment</Label>
                   <Input className="mt-1 h-9" type="number" value={pay.amount_paid} onChange={e => setPay(p => ({ ...p, amount_paid: e.target.value }))} />
+                  {(invoice.amount_paid ?? 0) > 0 && (
+                    <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                      {money(invoice.amount_paid ?? 0)} already received · {money(stillOwed)} outstanding
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label className="text-xs text-gray-500 dark:text-gray-400">Date</Label>

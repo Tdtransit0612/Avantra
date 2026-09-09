@@ -27,8 +27,12 @@ expected_functions(fn) as (values
   ('recalc_statement_totals'),('derive_compliance_status'),('set_service_request_number'),
   ('get_load_tracking'),('get_load_tracking_events'),
   ('stamp_lead_contacted'),     -- 07
-  ('get_app_config')            -- 08: the narrow read that replaced open
+  ('get_app_config'),           -- 08: the narrow read that replaced open
                                 --     SELECT on company_settings
+  ('sync_statement_line_void'), -- 09: releases a voided statement's loads
+  ('inherit_statement_line_void'),
+  ('record_statement_payment'), -- 09: payments accumulate atomically
+  ('record_invoice_payment')
 ),
 expected_sequences(sq) as (values
   ('client_number_seq'),('load_number_seq'),('invoice_number_seq'),

@@ -100,7 +100,11 @@ function GenerateSheet({ onCreated }: { onCreated: () => void }) {
         .not('status', 'in', '("cancelled","sourced","offered")')
         .gte('delivery_date', periodStart).lte('delivery_date', periodEnd)
         .order('delivery_date'),
-      supabase.from('statement_lines').select('load_id').eq('kind', 'fee').not('load_id', 'is', null),
+      // `voided` matters: a fee line under a voided statement no longer reserves
+      // its load. Without this filter, voiding a statement made its loads
+      // permanently unbillable — the scan kept seeing them as already billed.
+      supabase.from('statement_lines').select('load_id')
+        .eq('kind', 'fee').eq('voided', false).not('load_id', 'is', null),
       supabase.from('service_requests').select('*')
         .eq('client_id', clientId).eq('billable', true).eq('status', 'done')
         .is('billed_at', null),
@@ -364,7 +368,13 @@ function StatementSheet({ statement, clientName, onSaved, onClose }: {
   }, [statement.id])
 
   useEffect(() => { fetchLines() }, [fetchLines])
-  useEffect(() => { setPay(p => ({ ...p, amount_paid: String(statement.amount_due ?? 0) })) }, [statement.amount_due])
+  // Prefill the OUTSTANDING balance, not the full total. The field is this
+  // payment's amount, so on a partly-paid statement the whole total is the one
+  // number that is certainly wrong.
+  const outstanding = Math.max(0, (statement.amount_due ?? 0) - (statement.amount_paid ?? 0))
+  useEffect(() => {
+    setPay(p => ({ ...p, amount_paid: String(outstanding) }))
+  }, [outstanding])
 
   const patch = async (p: Record<string, unknown>, action: string) => {
     setBusy(true)
@@ -387,15 +397,37 @@ function StatementSheet({ statement, clientName, onSaved, onClose }: {
 
   const recordPayment = async () => {
     const amt = num(pay.amount_paid)
-    const full = amt >= (statement.amount_due ?? 0)
-    const ok = await patch({
-      status: full ? 'paid' : 'partial',
-      amount_paid: amt,
-      paid_date: pay.paid_date || todayISO(),
-      payment_method: pay.payment_method,
-      payment_reference: pay.payment_reference.trim() || null,
-    }, 'statement.payment')
-    if (ok) toast.success(full ? 'Statement paid' : 'Partial payment recorded')
+    if (amt <= 0) { toast.error('Enter an amount greater than zero.'); return }
+
+    // Through an RPC, not a direct update. The amount entered is THIS payment,
+    // and it must be added to what has already been received — the previous code
+    // overwrote amount_paid, so $400 then $600 against a $1,000 statement left
+    // 600 recorded, the status stuck on 'partial', and the client chased for
+    // money they had already sent. Doing the addition in SQL also means two
+    // people posting cheques at the same moment cannot lose one.
+    setBusy(true)
+    const supabase = createClient()
+    const { data, error } = await supabase.rpc('record_statement_payment', {
+      p_statement_id: statement.id,
+      p_amount: amt,
+      p_paid_date: pay.paid_date || todayISO(),
+      p_method: pay.payment_method,
+      p_reference: pay.payment_reference.trim() || null,
+    })
+    setBusy(false)
+    if (error) { toast.error(error.message); return }
+
+    const paid = (data as { status?: string; amount_paid?: number } | null)?.status === 'paid'
+    void logAudit('statement.payment', {
+      table_name: 'client_statements', record_id: statement.id,
+      new_value: {
+        statement_number: statement.statement_number,
+        payment_amount: amt,
+        amount_paid_total: (data as { amount_paid?: number } | null)?.amount_paid,
+      },
+    })
+    onSaved()
+    toast.success(paid ? 'Statement paid in full' : 'Partial payment recorded')
   }
 
   const voidStatement = async () => {
@@ -443,7 +475,6 @@ function StatementSheet({ statement, clientName, onSaved, onClose }: {
   }
 
   const editable = statement.status === 'draft'
-  const outstanding = (statement.amount_due ?? 0) - (statement.amount_paid ?? 0)
 
   return (
     <Sheet open onOpenChange={o => { if (!o) onClose() }}>
@@ -576,8 +607,15 @@ function StatementSheet({ statement, clientName, onSaved, onClose }: {
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Record a payment</p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div>
-                  <Label className="text-xs text-gray-500 dark:text-gray-400">Amount</Label>
+                  {/* Says "this payment" because it is added to what has already
+                      been received, not substituted for it. */}
+                  <Label className="text-xs text-gray-500 dark:text-gray-400">This payment</Label>
                   <Input className="mt-1 h-9" type="number" value={pay.amount_paid} onChange={e => setPay(p => ({ ...p, amount_paid: e.target.value }))} />
+                  {(statement.amount_paid ?? 0) > 0 && (
+                    <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                      {money(statement.amount_paid ?? 0)} already received · {money(outstanding)} outstanding
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label className="text-xs text-gray-500 dark:text-gray-400">Date</Label>

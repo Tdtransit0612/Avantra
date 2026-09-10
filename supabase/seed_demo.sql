@@ -183,11 +183,11 @@ on conflict (id) do nothing;
 -- ── Invoices ─────────────────────────────────────────────────────────────────
 insert into public.invoices (id, invoice_number, load_id, client_id, broker_id, status, amount, amount_paid, issued_date, due_date, terms, sent_at, paid_date, payment_method)
 values
-  ('00000000-0000-4000-8000-0000000000i1', 'INV-9001',
+  ('00000000-0000-4000-8000-0000000000f2', 'INV-9001',
    '00000000-0000-4000-8000-00000000001a', '00000000-0000-4000-8000-0000000000c1', '00000000-0000-4000-8000-0000000000b1',
    'paid', 3650, 3650, current_date - 21, current_date + 9, 'Net 30', now() - interval '21 days', current_date - 3, 'ach'),
 
-  ('00000000-0000-4000-8000-0000000000i2', 'INV-9002',
+  ('00000000-0000-4000-8000-0000000000f3', 'INV-9002',
    '00000000-0000-4000-8000-00000000003a', '00000000-0000-4000-8000-0000000000c2', '00000000-0000-4000-8000-0000000000b2',
    'overdue', 1010, 0, current_date - 61, current_date - 31, 'Net 30', now() - interval '61 days', null, null)
 on conflict (id) do update set status = excluded.status;
@@ -195,35 +195,35 @@ on conflict (id) do update set status = excluded.status;
 -- A couple of collection attempts on the overdue one.
 insert into public.invoice_traces (id, invoice_id, traced_at, method, outcome, contact_name, notes)
 values
-  ('00000000-0000-4000-8000-0000000000t1', '00000000-0000-4000-8000-0000000000i2', now() - interval '20 days', 'call',  'left_message',     'AP desk', 'Left voicemail, no callback.'),
-  ('00000000-0000-4000-8000-0000000000t2', '00000000-0000-4000-8000-0000000000i2', now() - interval '9 days',  'email', 'promised_payment', 'Jo Vance', 'Said it would go out in the next check run.')
+  ('00000000-0000-4000-8000-0000000000c4', '00000000-0000-4000-8000-0000000000f3', now() - interval '20 days', 'call',  'left_message',     'AP desk', 'Left voicemail, no callback.'),
+  ('00000000-0000-4000-8000-0000000000c5', '00000000-0000-4000-8000-0000000000f3', now() - interval '9 days',  'email', 'promised_payment', 'Jo Vance', 'Said it would go out in the next check run.')
 on conflict (id) do nothing;
 
 -- ── Compliance items ─────────────────────────────────────────────────────────
 -- status is derived by the trigger from expiry_date — never set it here.
 insert into public.compliance_items (id, client_id, entity_type, kind, provider, reference, amount, effective_date, expiry_date)
 values
-  ('00000000-0000-4000-8000-0000000000m1', '00000000-0000-4000-8000-0000000000c1', 'client', 'liability_insurance', 'Great West', 'GW-771201', 1000000, current_date - 320, current_date + 45),
-  ('00000000-0000-4000-8000-0000000000m2', '00000000-0000-4000-8000-0000000000c1', 'client', 'ifta', 'TX Comptroller', 'IFTA-TX-8891', null, current_date - 300, current_date + 65),
-  ('00000000-0000-4000-8000-0000000000m3', '00000000-0000-4000-8000-0000000000c2', 'client', 'liability_insurance', 'Progressive', 'PG-330219', 1000000, current_date - 353, current_date + 12),
-  ('00000000-0000-4000-8000-0000000000m4', '00000000-0000-4000-8000-0000000000c2', 'client', 'ucr', 'FMCSA', 'UCR-2210202', null, current_date - 200, current_date - 6),
-  ('00000000-0000-4000-8000-0000000000m5', '00000000-0000-4000-8000-0000000000c3', 'client', 'authority', 'FMCSA', 'MC-888303', null, null, null)
+  ('00000000-0000-4000-8000-0000000000a3', '00000000-0000-4000-8000-0000000000c1', 'client', 'liability_insurance', 'Great West', 'GW-771201', 1000000, current_date - 320, current_date + 45),
+  ('00000000-0000-4000-8000-0000000000a4', '00000000-0000-4000-8000-0000000000c1', 'client', 'ifta', 'TX Comptroller', 'IFTA-TX-8891', null, current_date - 300, current_date + 65),
+  ('00000000-0000-4000-8000-0000000000a5', '00000000-0000-4000-8000-0000000000c2', 'client', 'liability_insurance', 'Progressive', 'PG-330219', 1000000, current_date - 353, current_date + 12),
+  ('00000000-0000-4000-8000-0000000000a6', '00000000-0000-4000-8000-0000000000c2', 'client', 'ucr', 'FMCSA', 'UCR-2210202', null, current_date - 200, current_date - 6),
+  ('00000000-0000-4000-8000-0000000000a7', '00000000-0000-4000-8000-0000000000c3', 'client', 'authority', 'FMCSA', 'MC-888303', null, null, null)
 on conflict (id) do update set expiry_date = excluded.expiry_date;
 
 -- ── Service requests ─────────────────────────────────────────────────────────
 insert into public.service_requests (id, request_number, client_id, kind, title, description, status, priority, due_date, billable, fee_amount, completed_at)
 values
-  ('00000000-0000-4000-8000-0000000000s1', 'SR-9001', '00000000-0000-4000-8000-0000000000c3',
+  ('00000000-0000-4000-8000-0000000000b5', 'SR-9001', '00000000-0000-4000-8000-0000000000c3',
    'new_authority', 'Activate MC authority for Kestrel',
    'BOC-3 filed; waiting on the 21-day protest period to close.', 'waiting_third_party', 'high',
    current_date + 7, true, 350, null),
 
-  ('00000000-0000-4000-8000-0000000000s2', 'SR-9002', '00000000-0000-4000-8000-0000000000c2',
+  ('00000000-0000-4000-8000-0000000000b6', 'SR-9002', '00000000-0000-4000-8000-0000000000c2',
    'ucr', 'UCR renewal — Northbound',
    'UCR lapsed. Renew before the next interstate run.', 'open', 'urgent',
    current_date - 2, true, 90, null),
 
-  ('00000000-0000-4000-8000-0000000000s3', 'SR-9003', '00000000-0000-4000-8000-0000000000c1',
+  ('00000000-0000-4000-8000-0000000000b7', 'SR-9003', '00000000-0000-4000-8000-0000000000c1',
    'ifta_filing', 'Q1 IFTA filing — Rivera', null, 'done', 'normal',
    current_date - 15, true, 125, now() - interval '14 days')
 on conflict (id) do update set status = excluded.status;
